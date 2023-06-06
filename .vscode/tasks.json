@@ -1,0 +1,51 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+      {
+          "label": "build",
+          "type": "shell",
+          "command": "bash",
+          "args": [
+              "-c",
+              "export PATH=~/root/bin:$PATH && g++ -g main.cpp fitt0s.cpp radiustimefunction.cpp line_fitting.cpp gransac_implementations.cpp load_from_root_file.cpp -o analysis -I~/root/include `root-config --cflags --libs` -lMinuit -fopenmp"
+          ],
+          "group": "build",
+          "presentation": {
+              "reveal": "always",
+              "echo": true,
+              "focus": false,
+              "panel": "shared"
+          },
+          "problemMatcher": {
+              "owner": "cpp",
+              "fileLocation": [
+                  "relative",
+                  "${workspaceFolder}"
+              ],
+              "pattern": {
+                  "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                  "file": 1,
+                  "line": 2,
+                  "column": 3,
+                  "severity": 4,
+                  "message": 5
+              }
+          }
+      },
+      {
+          "label": "debug",
+          "type": "shell",
+          "command": "gdb",
+          "args": [
+              "${workspaceFolder}/analysis"
+          ],
+          "group": "test",
+          "presentation": {
+              "reveal": "always",
+              "echo": true,
+              "focus": false,
+              "panel": "shared"
+          }
+      }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug wowow",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/analysis",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for GDB",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ],
+      //"preLaunchTask": ""
+    },
+    {
+      "name": "(gdb) Launch",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/analysis",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [
+        {
+          "name": "LD_LIBRARY_PATH",
+          "value": "~/root/lib"  // Replace with the actual path to the ROOT library directory
+        }
+      ],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "preLaunchTask": "build"
+     
+    }
+  ]
+}
