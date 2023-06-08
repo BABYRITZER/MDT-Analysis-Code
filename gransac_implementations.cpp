@@ -1,6 +1,6 @@
 #include "gransac_implementations.h"
 
-void findInliers(vector<NewEvent> events, NewEvent &processed_event, TBranch *branch_eventnum, TBranch *branch_t, TBranch *branch_chg, TBranch *branch_chmb, TBranch *branch_layer, TBranch *branch_tube, TBranch *branch_is_inliner)
+void findInliers(vector<NewEvent> &events, NewEvent &processed_event, TBranch *branch_eventnum, TBranch *branch_t, TBranch *branch_chg, TBranch *branch_chmb, TBranch *branch_layer, TBranch *branch_tube, TBranch *branch_is_inliner)
 {
     vector<NewEvent> processed_events;
 
@@ -28,7 +28,7 @@ void findInliers(vector<NewEvent> events, NewEvent &processed_event, TBranch *br
 
         // Run GRANSAC
 
-        gransac.Initialize(4, 200);
+        gransac.Initialize(3, 200);
 
         gransac.Estimate(points);
 
@@ -56,16 +56,17 @@ void findInliers(vector<NewEvent> events, NewEvent &processed_event, TBranch *br
 
         for (int j = 0; j < events.at(i).t.size(); j++)
         {
-            if( std::find(goodhitindexes.begin(), goodhitindexes.end(), j) != goodhitindexes.end())
+            if (std::find(goodhitindexes.begin(), goodhitindexes.end(), j) != goodhitindexes.end())
             {
+                events.at(i).is_inlier.at(j) = 1;
                 processed_event.is_inlier.at(j) = 1;
             }
             else
-            {   
+            {
+                events.at(i).is_inlier.at(j) = 0;
                 processed_event.is_inlier.at(j) = 0;
             }
         }
-
 
         branch_eventnum->Fill();
         branch_t->Fill();

@@ -74,7 +74,7 @@ vector<NewEvent> loadTreeFromFile(string filename)
 				newevent.chamber.push_back(chambnum);
 				newevent.layer.push_back(layernum);
 				newevent.tube.push_back(tubenum);
-				newevent.is_inlier.push_back(1);
+				newevent.is_inlier.push_back(0);
 			}
 		}
 
