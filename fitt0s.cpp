@@ -2,7 +2,7 @@
 // input not a pointer as to not directly change the graph -- will return the fit function (TF1*) at the end in the struct
 #include "fitt0s.h"
 
-// pass in the vecor of the time spectrum
+// pass in the vector of the time spectrum
 Fittedt0s fit_t0(vector<float> times)
 {
 
@@ -86,7 +86,9 @@ vector<TF1> populate_t0s(vector<NewEvent> events, double &t0, double &t0err, TF1
 
 		TF1 *function = radius_for_time(times.at(i), t0_.t0);
 		TF1 r_function = *function;
+
 		rfuncs.push_back(*function);
+		extern_t0s.push_back(t0);
 
 		branch1->Fill();
 		branch2->Fill();

@@ -24,93 +24,10 @@ using std::endl;
 using std::string;
 using std::vector;
 
-// A test function to make a tree, fill it with some data, save it to a file, then read it back in
-void makeFakeTreePopulatedWithGuff(int number_of_events = 21)
-{
-
-    cout << "makeFakeTreePopulatedWithGuff" << endl;
-    TFile f("test_tree.root", "RECREATE");
-    TTree *t1 = new TTree("t1", "tree filled with random numbers");
-
-    cout << "Prepare branches" << endl;
-    Float_t px, py, pz;
-    t1->Branch("px", &px);
-    t1->Branch("py", &py);
-    t1->Branch("pz", &pz);
-
-    // Now make a branch of type NewEvent
-    NewEvent newEvent;
-    t1->Branch("newEvent", &newEvent);
-
-    cout << "Start filling tree" << endl;
-    for (Int_t i = 0; i < number_of_events; i++)
-    {
-        px = i * 3;
-        py = i * 4;
-        pz = i * 5;
-
-        // Populate newEvent
-        newEvent.eventnum = i;
-        newEvent.t.push_back(i);
-        newEvent.charge.push_back(i);
-        newEvent.chamber.push_back(i);
-        newEvent.layer.push_back(i);
-        newEvent.tube.push_back(i);
-        newEvent.is_inlier.push_back(i % 2);
-
-        t1->Fill();
-    }
-
-    t1->Print();
-
-    t1->Write();
-}
-
-void readFromTestTree(int number_of_events = 21)
-{
-    // Now READ the tree we just filled from the file we just created
-
-    TFile f2("test_tree.root");
-
-    TTree *t2 = (TTree *)f2.Get("t1");
-
-    Float_t px2, py2, pz2;
-
-    NewEvent *newEvent2 = new NewEvent(); // WOAH! This works?!?!?!?
-
-    t2->SetBranchAddress("px", &px2);
-    t2->SetBranchAddress("py", &py2);
-    t2->SetBranchAddress("pz", &pz2);
-
-    t2->SetBranchAddress("newEvent", &newEvent2);
-
-    cout << "Start reading tree" << endl;
-    for (Int_t i = 0; i < number_of_events; i++)
-    {
-        t2->GetEntry(i);
-        cout << px2 << " " << py2 << " " << pz2 << endl;
-
-        cout << "newEvent2.eventnum: " << newEvent2->eventnum << endl;
-        cout << "newEvent2.t.size(): " << newEvent2->t.size() << endl;
-        cout << "newEvent2.charge.size(): " << newEvent2->charge.size() << endl;
-        cout << "newEvent2.chamber.size(): " << newEvent2->chamber.size() << endl;
-        cout << "newEvent2.layer.size(): " << newEvent2->layer.size() << endl;
-        cout << "newEvent2.tube.size(): " << newEvent2->tube.size() << endl;
-        cout << "newEvent2.is_inlier.size(): " << newEvent2->is_inlier.size() << endl;
-    }
-
-    delete newEvent2; // Clean up the allocated memory
-}
 
 int main(int argc, char **argv)
 {
     TApplication app("Root app", &argc, argv);
-
-    // makeFakeTreePopulatedWithGuff();
-
-    // readFromTestTree();
-
-    // return 0;
 
     std::cout << " guh " << std::endl;
 
@@ -277,6 +194,7 @@ int main(int argc, char **argv)
             int realtubenum = 48 * (chambnum) + 16 * (layernum) + tubenum;
 
             hittubenums.push_back(realtubenum);
+            //TODO
             float toime = time->at(i) - 740.;
             hittubetimes.push_back(toime);
             // hitsreconst.at(jentry)->Fill( tubenum, finallayer );
@@ -349,11 +267,19 @@ int main(int argc, char **argv)
             y = ((float)i * 69.6) / ((float)bins);
             yvalues[i] = y;
 
-            xvaluesc1[i] = (-1. / a_c1) * (y + b_c1);
-            xvaluesc2[i] = (-1. / a_c2) * (y + b_c2);
-            xvaluesc3[i] = (-1. / a_c3) * (y + b_c3);
-            xvaluesc[i] = (-1. / a) * (y + b);
+            xvaluesc1[i] = (-1. * (a_c1 * y + b_c1));
+            xvaluesc2[i] = (-1. * (a_c2 * y + b_c2));
+            xvaluesc3[i] = (-1. * (a_c3 * y + b_c3));
+            xvaluesc[i] = (-1. * (a * y + b));
         }
+
+
+        std::cout << "c1 fit in green, c2 fit in red, c3 fit in blue and fit over all chambers in cyan." << std::endl;
+
+        std::cout << "chisquare for c1 fit is " << c1_chisq << std::endl;
+        std::cout << "chisquare for c2 fit is " << c2_chisq << std::endl;
+        std::cout << "chisquare for c3 fit is " << c3_chisq << std::endl;
+        std::cout << "chisquare for all chambers fit is " << chisq << std::endl;
 
         TGraph *guh0 = new TGraph(bins, xvaluesc1, yvalues);
         guh0->SetLineColor(kGreen);

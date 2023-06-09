@@ -12,6 +12,8 @@ using std::vector;
 extern vector<float> xvs;
 extern vector<float> yvs;
 extern vector<float> rvs;
+extern vector<float> extern_t0s;
+extern vector<float> sigmas;
 extern vector<float> as;
 extern int what_entrynum;
 

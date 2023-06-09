@@ -21,6 +21,8 @@ using std::vector;
 vector<float> xvs;
 vector<float> yvs;
 vector<float> rvs;
+vector<float> sigmas;
+vector<float> extern_t0s;
 vector<float> as;
 int what_entrynum;
 
@@ -133,23 +135,27 @@ int main()
 	xvs.clear();
 	yvs.clear();
 	rvs.clear();
+	sigmas.clear();
 
 	vector<LineParts> c2_fit_params = fit_single_chamber(1, 0, events, rfuncs, lineparamsc2, branch_ac2, branch_aerrc2, branch_bc2, branch_berrc2, branch_chisqc2, branch_evnumc2);
 
 	xvs.clear();
 	yvs.clear();
 	rvs.clear();
+	sigmas.clear();
 
 	vector<LineParts> c3_fit_params = fit_single_chamber(2, 0, events, rfuncs, lineparamsc3, branch_ac3, branch_aerrc3, branch_bc3, branch_berrc3, branch_chisqc3, branch_evnumc3);
 
 	xvs.clear();
 	yvs.clear();
 	rvs.clear();
+	sigmas.clear();
 
 	vector<vector<LineParts>> chamber_fit_params = {c1_fit_params, c2_fit_params, c3_fit_params};
 
 	// calibration stuff
-	// not each chamber always has hits so they have diff amount of fits - may need to associate an event num with each fit
+
+	// TODO: fix this angle stuff ------ now i think i just full on refit the lines after adjusting by the angle -- VERY MUCH WIP
 
 	float c2mc1d;
 	vector<float> c2mc1ds;
@@ -158,33 +164,12 @@ int main()
 	TBranch *branch_bdiff_c2_c1 = tree1->Branch("cham2_minus_chamb1_slopes", &c2mc1d);
 	TBranch *branch_bdiff_c2_c3 = tree1->Branch("cham2_minus_chamb3_slopes", &c2mc3d);
 
-	/*
-		for (int event = 0; event < events.size(); event++)
-		{
-			if (chamber_fit_params.at(1).at(event).a != 0 && chamber_fit_params.at(0).at(event).a != 0)
-			{
-				c2mc1d = (chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(0).at(event).a);
-				c2mc1ds.push_back(c2mc1d);
-				branch_bdiff_c2_c1->Fill();
-			}
-
-			if ((chamber_fit_params.at(2).at(event).a) != 0 && (chamber_fit_params.at(1).at(event).a) != 0)
-			{
-				c2mc3d = (chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(2).at(event).a);
-				c2mc3ds.push_back(c2mc3d);
-				branch_bdiff_c2_c3->Fill();
-			}
-		}
-	*/
-
 	for (int event = 0; event < events.size(); event++)
 	{
 		if (chamber_fit_params.at(1).at(event).a != 0 && chamber_fit_params.at(0).at(event).a != 0)
 		{
 			c2mc1d = (chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(0).at(event).a);
 
-			// Get angular difference between the two lines
-			// c2mc1d = atan((chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(0).at(event).a) / (1 + (chamber_fit_params.at(1).at(event).a) * (chamber_fit_params.at(0).at(event).a)));
 			c2mc1ds.push_back(c2mc1d);
 			branch_bdiff_c2_c1->Fill();
 		}
@@ -193,9 +178,6 @@ int main()
 		{
 			c2mc3d = (chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(2).at(event).a);
 
-			// Get angular difference between the two lines
-			// c2mc3d = atan((chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(2).at(event).a) / (1 + (chamber_fit_params.at(1).at(event).a) * (chamber_fit_params.at(2).at(event).a)));
-
 			c2mc3ds.push_back(c2mc3d);
 			branch_bdiff_c2_c3->Fill();
 		}
@@ -203,19 +185,19 @@ int main()
 
 	// fit histograms of these diffs to get the middle
 
-	TH1F *twominus1 = new TH1F("", "h1 title", 200, -10.0, 10.0);
-	TH1F *twominus3 = new TH1F("", "h1 title", 200, -10.0, 10.0);
+	TH1F *twominus1 = new TH1F("", "h1 title", 200, -30.0, 30.0);
+	TH1F *twominus3 = new TH1F("", "h1 title", 200, -30.0, 30.0);
 
 	for (int i = 0; i < c2mc1ds.size(); i++)
 	{
-		if ((chamber_fit_params.at(1).at(i).a) != 0) //&& (c2mc1ds.at(i) < 10. && c2mc1ds.at(i) > -10.))
+		if ((chamber_fit_params.at(1).at(i).a) != 0) 
 		{
 			twominus1->Fill(c2mc1ds.at(i));
 		}
 	}
 	for (int i = 0; i < c2mc3ds.size(); i++)
 	{
-		if ((chamber_fit_params.at(1).at(i).a) != 0) //&& (c2mc3ds.at(i) < 10 && c2mc3ds.at(i) > -10))
+		if ((chamber_fit_params.at(1).at(i).a) != 0) 
 		{
 			twominus3->Fill(c2mc3ds.at(i));
 		}
@@ -239,18 +221,11 @@ int main()
 	TBranch *branch_bpc3 = tree1->Branch("b'_c3", &c3_f_p.b);
 	TBranch *branch_bpec3 = tree1->Branch("b'_err_c3", &c3_f_p.berr);
 
-	// TODO: Should we be taking the average of the differences between the slopes and subtracting or finding the
-	// average angle between the lines and then rotating the points themselves when fitting
-
 	// c1
 	what_entrynum = 0;
 	for (int i = 0; i < events.size(); i++)
 	{
-
-		as.push_back(chamber_fit_params.at(0).at(i).a - meanc1_a_diffs); // This is a global variable defined in line_fitting.h TODO: remove
-
-		// Get the angle of the line and subtract the mean difference. Convert back to slope
-		// as.push_back(tan(atan(chamber_fit_params.at(0).at(i).a) - meanc1_a_diffs)); // This is a global variable defined in line_fitting.h
+		as.push_back(chamber_fit_params.at(0).at(i).a - meanc1_a_diffs); // This is a global variable defined in line_fitting.h 
 	}
 
 	cout << "This is the slow bit" << endl;
@@ -261,10 +236,7 @@ int main()
 	what_entrynum = 0;
 	for (int i = 0; i < events.size(); i++)
 	{
-		as.push_back(chamber_fit_params.at(2).at(i).a - meanc1_a_diffs); // This is a global variable defined in line_fitting.h TODO: remove
-
-		// Get the angle of the line and subtract the mean difference. Convert back to slope
-		// as.push_back(tan(atan(chamber_fit_params.at(2).at(i).a) - meanc3_a_diffs)); // This is a global variable defined in line_fitting.h
+		as.push_back(chamber_fit_params.at(2).at(i).a - meanc1_a_diffs); // This is a global variable defined in line_fitting.h 
 	}
 
 	vector<LineParts> c3bprime = fit_single_chamber(2, 1, events, rfuncs, c3_f_p, branch_bpc3, branch_bpec3);
@@ -297,8 +269,8 @@ int main()
 	branch_bpfc1->Fill();
 	branch_bpfc3->Fill();
 
-	// fit all chambers together
 
+	// finally, fit all chambers together
 	std::cout << "fitting all chambers together " << std::endl;
 
 	LineParts lineparams;
@@ -311,7 +283,7 @@ int main()
 
 	vector<LineParts> fittedlines = fit_chamber(events, rfuncs, lineparams, branch_a, branch_aerr, branch_b, branch_berr, branch_chisq, meanc1_b_diffs, meanc3_b_diffs);
 
-	// Checking all the tubes the line intersects with for efficiency calculations
+	// now calculate per tube efficiency
 
 	vector<int> dist_lessthan_counter;
 	vector<int> tube_hit_counter;
@@ -344,8 +316,8 @@ int main()
 				{
 					int tubenum = chamb * 48 + layer * 16 + tube;
 					vector<float> xy = getTubeCoords(chamb, layer, tube);
-					double d_line_tube = abs(line.a * xy.at(0) + xy.at(1) + line.b) / sqrt(line.a * line.a + 1);
-					if (d_line_tube < 1.5) // tube radius
+					double d_line_tube = abs(xy.at(0) + line.a * xy.at(1) + line.b) / sqrt(line.a * line.a + 1);
+					if (d_line_tube < 1.46) // tube radius
 					{
 						dist_lessthan_counter.at(tubenum) += 1;
 
@@ -353,6 +325,15 @@ int main()
 							tube_hit_counter.at(tubenum) += 1;
 					}
 				}
+	}
+
+	double tubeeff;
+	TBranch *tube_eff = tree1->Branch("tube_eff", &tubeeff);
+
+	for (int i = 0; i < 144; i++)
+	{
+		tubeeff = (double)tube_hit_counter.at(i) / (double)dist_lessthan_counter.at(i);
+		tube_eff->Fill();
 	}
 
 	tree1->SetEntries(events.size());

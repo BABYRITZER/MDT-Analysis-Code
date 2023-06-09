@@ -5,7 +5,7 @@ static double d0(float x0, float y0, double *par)
 	// params are in form ax + by + c = 0 ------> (-1/b)*(ax + c) = y
 
 	//	double value = abs(par[0] * x0 + par[1] * y0 + 1) / sqrt(par[0] * par[0] + par[1] * par[1]);
-	double value = abs(par[0] * x0 + y0 + par[1]) / sqrt(par[0] * par[0] + 1);
+	double value = abs(x0 + par[0] * y0 + par[1]) / sqrt(par[0] * par[0] + 1);
 
 	return value;
 }
@@ -15,7 +15,7 @@ static double d0_noslope_fit(float x0, float y0, vector<float> a, double *par)
 	// params are in form ax + y + c = 0 ------> (-ax - c) = y
 
 	//	double value = abs(par[0] * x0 + par[1] * y0 + 1) / sqrt(par[0] * par[0] + par[1] * par[1]);
-	double value = abs(a.at(what_entrynum) * x0 + y0 + par[0]) / sqrt(a.at(what_entrynum) * a.at(what_entrynum) + 1);
+	double value = abs(x0 + a.at(what_entrynum) * y0 + par[0]) / sqrt(a.at(what_entrynum) * a.at(what_entrynum) + 1);
 
 	return value;
 }
@@ -25,20 +25,18 @@ static void fcn2(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t i
 	const Int_t nbins = xvs.size();
 	Int_t i;
 
-	// for res divide 1.46 / time spec width -> 200 / that -> convert to cm
-	// 200 because expect 200 micron resolution
-
-	// v_d * 10
-	double sigmas = 0.1; // this is 1mm resolution
-
 	// calculate chisquare
 	Double_t chisq = 0;
 	Double_t delta;
 	for (i = 0; i < nbins; i++)
 	{
-		delta = (rvs.at(i) - d0_noslope_fit(xvs.at(i), yvs.at(i), as, par)) / sigmas;
+		float sigma = sigmas.at(i);
+		// delta = (rvs.at(i) - d0_noslope_fit(xvs.at(i), yvs.at(i), as, par)) / (double)sigma;
+		delta = (rvs.at(i) - d0_noslope_fit(xvs.at(i), yvs.at(i), as, par)) / 0.1;
+
 		chisq += delta * delta;
 	}
+
 	f = chisq;
 }
 
@@ -47,20 +45,21 @@ static void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t if
 	const Int_t nbins = xvs.size();
 	Int_t i;
 
-	// for res divide 1.46 / time spec width -> 200 / that -> convert to cm
-	// 200 because expect 200 micron resolution
-
-	// v_d * 10
-	double sigmas = 0.1; // this is 1mm resolution
+	// for res do v_d * 10
 
 	// calculate chisquare
 	Double_t chisq = 0;
 	Double_t delta;
 	for (i = 0; i < nbins; i++)
 	{
-		delta = (rvs.at(i) - d0(xvs.at(i), yvs.at(i), par)) / sigmas;
+		float sigma = sigmas.at(i);
+		// delta = (rvs.at(i) - d0(xvs.at(i), yvs.at(i), par)) / (double)sigma;
+		delta = (rvs.at(i) - d0(xvs.at(i), yvs.at(i), par)) / 0.1;
+
 		chisq += delta * delta;
+		// sstd::cout << rvs.at(i) << " " << d0(xvs.at(i), yvs.at(i), par) << " " << xvs.at(i) << " " << yvs.at(i) << " " << par[0] << " " << par[1] << std::endl;
 	}
+	// std::cout << "chisq is " << chisq << std::endl;
 	f = chisq;
 }
 
@@ -81,8 +80,8 @@ LineParts justfitlines(int setfn)
 	/// gMinuit->SetErrorDef(1);
 
 	// Set starting values and step sizes for parameters
-	static Double_t vstart[2] = {100, 500};
-	static Double_t step[2] = {0.01, 0.01};
+	static Double_t vstart[2] = {0, 25};
+	static Double_t step[2] = {0.001, 0.001};
 	if (setfn == 0)
 	{
 		gMinuit->mnparm(0, "a", vstart[0], step[0], 0, 0, ierflg);
@@ -155,6 +154,7 @@ vector<float> getTubeCoords(int chamber, int layer, int tube)
 
 	return coord;
 }
+
 // This is the function that fits the lines for each chamber. Does all at once.
 vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparams, TBranch *branch_a, TBranch *branch_aerr, TBranch *branch_b, TBranch *branch_berr, TBranch *branch_chisq, float meanc1_b_diffs, float meanc3_b_diffs)
 {
@@ -177,7 +177,7 @@ vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineP
 				float time = events.at(i).t.at(j);
 
 				vector<float> xy = getTubeCoords(events.at(i).chamber.at(j), events.at(i).layer.at(j), events.at(i).tube.at(j));
-				// subtracting only the horizontal offsets
+
 				if (events.at(i).chamber.at(j) == 0)
 					xy.at(0) = xy.at(0) - meanc1_b_diffs;
 
@@ -189,7 +189,8 @@ vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineP
 				xvs.push_back(xy.at(0));
 				yvs.push_back(xy.at(1));
 
-				rvs.push_back(rfuncs.at(tubenum).Eval(time));
+				rvs.push_back(rfuncs.at(tubenum).Eval(time - extern_t0s.at(tubenum)));
+				sigmas.push_back(rfuncs.at(tubenum).Derivative(time - extern_t0s.at(tubenum)) * 10.);
 			}
 		}
 
@@ -207,18 +208,20 @@ vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineP
 		xvs.clear();
 		yvs.clear();
 		rvs.clear();
+		sigmas.clear();
 	}
 
 	return lines;
 }
 
+// SINGLE CHAMBER FIT, RETURNS EVERY PARAMETER INTO A BRANCH
 vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparamsc1,
 									 TBranch *branch_ac1, TBranch *branch_aerrc1, TBranch *branch_bc1, TBranch *branch_berrc1, TBranch *branch_chisqc1,
 									 TBranch *branch_evnumc1)
 {
 
 	std::cout << "fitting " << events.size() << " lines for chamber " << chambernumber << std::endl;
-
+	// TODO
 	vector<LineParts> c1fits;
 
 	for (int i = 0; i < events.size(); i++)
@@ -234,6 +237,7 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 
 	for (int i = 0; i < events.size(); i++)
 	{
+
 		if (i % 5000 == 0)
 			std::cout << "you are at fit for event " << i << " of " << events.size() << std::endl;
 
@@ -251,7 +255,8 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 
 				xvs.push_back(xy.at(0));
 				yvs.push_back(xy.at(1));
-				rvs.push_back(rfuncs.at(tubenum).Eval(time));
+				rvs.push_back(rfuncs.at(tubenum).Eval(time - extern_t0s.at(tubenum)));
+				sigmas.push_back(rfuncs.at(tubenum).Derivative(time - extern_t0s.at(tubenum)) * 10.);
 			}
 		}
 
@@ -270,11 +275,13 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 		xvs.clear();
 		yvs.clear();
 		rvs.clear();
+		sigmas.clear();
 	}
 
 	return c1fits;
 }
 
+// SINGLE CHAMBER FIT, RETURNS ONLY INTERCEPT
 vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparamsc1, TBranch *branch_bc1, TBranch *branch_berrc1)
 {
 
@@ -319,7 +326,8 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 
 				xvs.push_back(xy.at(0));
 				yvs.push_back(xy.at(1));
-				rvs.push_back(rfuncs.at(tubenum).Eval(time));
+				rvs.push_back(rfuncs.at(tubenum).Eval(time - extern_t0s.at(tubenum)));
+				sigmas.push_back(rfuncs.at(tubenum).Derivative(time - extern_t0s.at(tubenum)) * 10.);
 			}
 		}
 
@@ -333,6 +341,7 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 		xvs.clear();
 		yvs.clear();
 		rvs.clear();
+		sigmas.clear();
 
 		what_entrynum += 1;
 	}
