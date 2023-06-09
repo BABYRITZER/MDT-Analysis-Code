@@ -62,7 +62,7 @@ vector<NewEvent> loadTreeFromFile(string filename)
 
 		for (int i = 0; i < numhits; i++)
 		{
-			if (leading->at(i) > 0 && charge->at(i) > 40 && charge->at(i) < 600) //&& numhits <= 9)
+			if (leading->at(i) > 0 && charge->at(i) > 40 && charge->at(i) < 600 )//&& numhits <= 60)
 			{
 				int chambnum = chamber->at(i) - 1;
 				int layernum = layer->at(i) - 1;

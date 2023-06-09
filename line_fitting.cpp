@@ -29,7 +29,7 @@ static void fcn2(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t i
 	// 200 because expect 200 micron resolution
 
 	// v_d * 10
-	double sigmas = 1; // this is 1mm resolution
+	double sigmas = 0.1; // this is 1mm resolution
 
 	// calculate chisquare
 	Double_t chisq = 0;
@@ -51,7 +51,7 @@ static void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t if
 	// 200 because expect 200 micron resolution
 
 	// v_d * 10
-	double sigmas = 1; // this is 1mm resolution
+	double sigmas = 0.1; // this is 1mm resolution
 
 	// calculate chisquare
 	Double_t chisq = 0;
@@ -155,9 +155,10 @@ vector<float> getTubeCoords(int chamber, int layer, int tube)
 
 	return coord;
 }
-// THis is the function that fits the lines for each chamber. Does all at once.
-void fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparams, TBranch *branch_a, TBranch *branch_aerr, TBranch *branch_b, TBranch *branch_berr, TBranch *branch_chisq)
+// This is the function that fits the lines for each chamber. Does all at once.
+vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparams, TBranch *branch_a, TBranch *branch_aerr, TBranch *branch_b, TBranch *branch_berr, TBranch *branch_chisq, float meanc1_b_diffs, float meanc3_b_diffs)
 {
+	vector<LineParts> lines;
 	std::cout << "fitting " << events.size() << " lines for the whole apparatus " << std::endl;
 	for (int i = 0; i < events.size(); i++)
 	{
@@ -176,6 +177,12 @@ void fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineParts &linepar
 				float time = events.at(i).t.at(j);
 
 				vector<float> xy = getTubeCoords(events.at(i).chamber.at(j), events.at(i).layer.at(j), events.at(i).tube.at(j));
+				// subtracting only the horizontal offsets
+				if (events.at(i).chamber.at(j) == 0)
+					xy.at(0) = xy.at(0) - meanc1_b_diffs;
+
+				if (events.at(i).chamber.at(j) == 2)
+					xy.at(0) = xy.at(0) - meanc3_b_diffs;
 
 				int tubenum = events.at(i).chamber.at(j) * 48 + events.at(i).layer.at(j) * 16 + events.at(i).tube.at(j);
 
@@ -189,6 +196,8 @@ void fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineParts &linepar
 		// fit all chambers
 		lineparams = justfitlines();
 
+		lines.push_back(lineparams); // save the line parameters
+
 		branch_a->Fill();
 		branch_aerr->Fill();
 		branch_b->Fill();
@@ -199,6 +208,8 @@ void fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineParts &linepar
 		yvs.clear();
 		rvs.clear();
 	}
+
+	return lines;
 }
 
 vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparamsc1,

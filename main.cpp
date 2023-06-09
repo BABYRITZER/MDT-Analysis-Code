@@ -158,11 +158,33 @@ int main()
 	TBranch *branch_bdiff_c2_c1 = tree1->Branch("cham2_minus_chamb1_slopes", &c2mc1d);
 	TBranch *branch_bdiff_c2_c3 = tree1->Branch("cham2_minus_chamb3_slopes", &c2mc3d);
 
+	/*
+		for (int event = 0; event < events.size(); event++)
+		{
+			if (chamber_fit_params.at(1).at(event).a != 0 && chamber_fit_params.at(0).at(event).a != 0)
+			{
+				c2mc1d = (chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(0).at(event).a);
+				c2mc1ds.push_back(c2mc1d);
+				branch_bdiff_c2_c1->Fill();
+			}
+
+			if ((chamber_fit_params.at(2).at(event).a) != 0 && (chamber_fit_params.at(1).at(event).a) != 0)
+			{
+				c2mc3d = (chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(2).at(event).a);
+				c2mc3ds.push_back(c2mc3d);
+				branch_bdiff_c2_c3->Fill();
+			}
+		}
+	*/
+
 	for (int event = 0; event < events.size(); event++)
 	{
 		if (chamber_fit_params.at(1).at(event).a != 0 && chamber_fit_params.at(0).at(event).a != 0)
 		{
 			c2mc1d = (chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(0).at(event).a);
+
+			// Get angular difference between the two lines
+			// c2mc1d = atan((chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(0).at(event).a) / (1 + (chamber_fit_params.at(1).at(event).a) * (chamber_fit_params.at(0).at(event).a)));
 			c2mc1ds.push_back(c2mc1d);
 			branch_bdiff_c2_c1->Fill();
 		}
@@ -170,6 +192,10 @@ int main()
 		if ((chamber_fit_params.at(2).at(event).a) != 0 && (chamber_fit_params.at(1).at(event).a) != 0)
 		{
 			c2mc3d = (chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(2).at(event).a);
+
+			// Get angular difference between the two lines
+			// c2mc3d = atan((chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(2).at(event).a) / (1 + (chamber_fit_params.at(1).at(event).a) * (chamber_fit_params.at(2).at(event).a)));
+
 			c2mc3ds.push_back(c2mc3d);
 			branch_bdiff_c2_c3->Fill();
 		}
@@ -213,11 +239,18 @@ int main()
 	TBranch *branch_bpc3 = tree1->Branch("b'_c3", &c3_f_p.b);
 	TBranch *branch_bpec3 = tree1->Branch("b'_err_c3", &c3_f_p.berr);
 
+	// TODO: Should we be taking the average of the differences between the slopes and subtracting or finding the
+	// average angle between the lines and then rotating the points themselves when fitting
+
 	// c1
 	what_entrynum = 0;
 	for (int i = 0; i < events.size(); i++)
 	{
-		as.push_back(chamber_fit_params.at(0).at(i).a - meanc1_a_diffs); // This is a global variable defined in line_fitting.h
+
+		as.push_back(chamber_fit_params.at(0).at(i).a - meanc1_a_diffs); // This is a global variable defined in line_fitting.h TODO: remove
+
+		// Get the angle of the line and subtract the mean difference. Convert back to slope
+		// as.push_back(tan(atan(chamber_fit_params.at(0).at(i).a) - meanc1_a_diffs)); // This is a global variable defined in line_fitting.h
 	}
 
 	cout << "This is the slow bit" << endl;
@@ -228,7 +261,10 @@ int main()
 	what_entrynum = 0;
 	for (int i = 0; i < events.size(); i++)
 	{
-		as.push_back(chamber_fit_params.at(2).at(i).a - meanc1_a_diffs); // This is a global variable defined in line_fitting.h
+		as.push_back(chamber_fit_params.at(2).at(i).a - meanc1_a_diffs); // This is a global variable defined in line_fitting.h TODO: remove
+
+		// Get the angle of the line and subtract the mean difference. Convert back to slope
+		// as.push_back(tan(atan(chamber_fit_params.at(2).at(i).a) - meanc3_a_diffs)); // This is a global variable defined in line_fitting.h
 	}
 
 	vector<LineParts> c3bprime = fit_single_chamber(2, 1, events, rfuncs, c3_f_p, branch_bpc3, branch_bpec3);
@@ -236,8 +272,30 @@ int main()
 
 	what_entrynum = 0;
 
-	// after taking these slope differences to get the angle offsets relative to chamber two we then have to refit taking into account the angle differences to get a value for the intercept
-	// then fit all chambers together after adjusting
+	// make histograms of the b
+	TH1F *bprime_chamber1 = new TH1F("", "h1 title", 200, -100., 100.);
+	TH1F *bprime_chamber3 = new TH1F("", "h1 title", 200, -100., 100.);
+
+	for (int i = 0; i < events.size(); i++)
+	{
+		if (c1bprime.at(i).b != 0)
+			bprime_chamber1->Fill(c1bprime.at(i).b);
+		if (c3bprime.at(i).b != 0)
+			bprime_chamber3->Fill(c3bprime.at(i).b);
+	}
+
+	bprime_chamber1->Fit("gaus");
+	bprime_chamber3->Fit("gaus");
+
+	// Get the parameter 1 of the fit
+	float meanc1_b_diffs = twominus1->GetFunction("gaus")->GetParameter(1);
+	float meanc3_b_diffs = twominus3->GetFunction("gaus")->GetParameter(1);
+
+	TBranch *branch_bpfc1 = tree1->Branch("fitted_b'_c1", &meanc1_b_diffs);
+	TBranch *branch_bpfc3 = tree1->Branch("fitted_b'_c3", &meanc3_b_diffs);
+
+	branch_bpfc1->Fill();
+	branch_bpfc3->Fill();
 
 	// fit all chambers together
 
@@ -251,9 +309,55 @@ int main()
 	TBranch *branch_berr = tree1->Branch("berr", &lineparams.berr);
 	TBranch *branch_chisq = tree1->Branch("chisq", &lineparams.chisq);
 
-	fit_chamber(events, rfuncs, lineparams, branch_a, branch_aerr, branch_b, branch_berr, branch_chisq);
+	vector<LineParts> fittedlines = fit_chamber(events, rfuncs, lineparams, branch_a, branch_aerr, branch_b, branch_berr, branch_chisq, meanc1_b_diffs, meanc3_b_diffs);
+
+	// Checking all the tubes the line intersects with for efficiency calculations
+
+	vector<int> dist_lessthan_counter;
+	vector<int> tube_hit_counter;
+
+	for (int i = 0; i < 144; i++)
+	{
+		dist_lessthan_counter.push_back(0);
+		tube_hit_counter.push_back(0);
+	}
+
+	for (int i = 0; i < events.size(); i++)
+	{
+		LineParts line = fittedlines.at(i);
+
+		vector<int> hittubenums;
+		for (int j = 0; j < events.at(i).t.size(); j++)
+		{
+			int chambnum = events.at(i).chamber.at(j);
+			int layernum = events.at(i).layer.at(j);
+			int tubenum = events.at(i).tube.at(j);
+
+			int realtubenum = 48 * (chambnum) + 16 * (layernum) + tubenum;
+
+			hittubenums.push_back(realtubenum);
+		}
+
+		for (int chamb = 0; chamb < 3; chamb++)
+			for (int layer = 0; layer < 3; layer++)
+				for (int tube = 0; tube < 16; tube++)
+				{
+					int tubenum = chamb * 48 + layer * 16 + tube;
+					vector<float> xy = getTubeCoords(chamb, layer, tube);
+					double d_line_tube = abs(line.a * xy.at(0) + xy.at(1) + line.b) / sqrt(line.a * line.a + 1);
+					if (d_line_tube < 1.5) // tube radius
+					{
+						dist_lessthan_counter.at(tubenum) += 1;
+
+						if (std::find(hittubenums.begin(), hittubenums.end(), tubenum) != hittubenums.end())
+							tube_hit_counter.at(tubenum) += 1;
+					}
+				}
+	}
 
 	tree1->SetEntries(events.size());
+
+	// Write the tree to the file and close the file to save.
 	tree1->Write();
 	file->Close();
 
