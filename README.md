@@ -6,5 +6,5 @@ g++ -Wall -Wextra event_dict.cpp main.cpp fitt0s.cpp radiustimefunction.cpp line
 to build the chamber viewer:
 g++ -Wall -Wextra event_dict.cpp radiustimefunction.cpp chambers.cpp -o drawchambs `root-config --cflags --libs` -lMinuit -fopenmp
 
-The RANSAC algorithm implementation was taken freom:
+The RANSAC algorithm implementation was taken from:
 https://github.com/drsrinathsridhar/GRANSAC/. 
