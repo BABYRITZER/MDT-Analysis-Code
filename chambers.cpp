@@ -24,14 +24,19 @@ using std::endl;
 using std::string;
 using std::vector;
 
-
 int main(int argc, char **argv)
 {
     TApplication app("Root app", &argc, argv);
 
     std::cout << " guh " << std::endl;
 
-    TFile *f = new TFile(("reco_run988_analysis.root"));
+    string name;
+    cout << "enter file number you want" << endl;
+    std::cin >> name;
+
+    string filename = "reco_run" + name + "_analysis.root";
+
+    TFile *f = new TFile((filename.c_str()));
     TTree *tree = (TTree *)f->Get("myTree");
 
     Double_t t0s;
@@ -160,18 +165,29 @@ int main(int argc, char **argv)
         for (int j = 0; j < time->size(); j++)
         {
             int tubenum = chamber->at(j) * 48 + layer->at(j) * 16 + tube->at(j);
-            times.at(tubenum).push_back(time->at(j));
+            times.at(0).push_back(time->at(j));
             t0_vals.push_back(t0s);
         }
     }
 
     vector<TF1 *> rfns;
     for (int i = 0; i < 144; i++)
-        rfns.push_back(radius_for_time(times.at(i), t0_vals.at(i)));
+        rfns.push_back(radius_for_time(times.at(0), t0_vals.at(i)));
 
     // start
-    TCanvas *c1 = new TCanvas("c1", "c1", 495, 696);
-    c1->Range(0, 0, 49.5, 69.6);
+    TCanvas *c1 = new TCanvas("c1", "c1", 495 + 4, 696 + 4);
+    c1->Range(0, 0, 49.5 + 4, 69.6 + 4);
+
+    // rotation matrices and horizontal offsets
+
+    double meanc1_angle = 0; //atan(-0.08);
+    double meanc3_angle = 0; //atan(-0.01);
+
+    double meanc1_b_diffs = 0; //-0.504;
+    double meanc3_b_diffs = 0; //1.01;
+
+    double rotationmatc3[2][2] = {{cos(meanc3_angle), -sin(meanc3_angle)}, {sin(meanc3_angle), cos(meanc3_angle)}};
+    double rotationmatc1[2][2] = {{cos(meanc1_angle), -sin(meanc1_angle)}, {sin(meanc1_angle), cos(meanc1_angle)}};
 
     for (int entry = 0; entry < entries; entry++)
     {
@@ -189,15 +205,18 @@ int main(int argc, char **argv)
             int chambnum = chamber->at(i) - 1;
             int layernum = layer->at(i) - 1;
             int tubenum = tube->at(i) - 1;
-            // 48*(chamber -1)+16*layer-1+tube-1==0 && charge > 40 && leading > 1
-            // int finallayer = 3 * chambnum + layernum;
             int realtubenum = 48 * (chambnum) + 16 * (layernum) + tubenum;
 
             hittubenums.push_back(realtubenum);
-            //TODO
-            float toime = time->at(i) - 740.;
+            // TODO
+            float toime = time->at(i) - t0s;
             hittubetimes.push_back(toime);
-            // hitsreconst.at(jentry)->Fill( tubenum, finallayer );
+        }
+
+        if (hittubenums.size() == 0)
+        {
+            std::cout << "no hits in event " << entry << std::endl;
+            continue;
         }
 
         int tubeNum;
@@ -212,20 +231,43 @@ int main(int argc, char **argv)
             {
                 for (tubeNum = 0; tubeNum < 16; tubeNum++)
                 {
-                    x = layerNum == 1 ? 1.5 + tubeNum * 3 : 3 + tubeNum * 3;
-                    y = 1.5 + 2.6 * layerNum + (22.5 + 8.2) * chambNum;
+
+                    if (chambNum == 0)
+                    {
+                        x = layerNum == 1 ? 1.5 + tubeNum * 3 : 3 + tubeNum * 3 - meanc1_b_diffs;
+                        y = 1.5 + 2.6 * layerNum + (22.5 + 8.2) * chambNum;
+
+                        x = (rotationmatc1[0][0] * x + rotationmatc1[0][1] * y);
+                        y = (rotationmatc1[1][0] * x + rotationmatc1[1][1] * y);
+                    }
+                    if (chambNum == 1)
+                    {
+                        x = layerNum == 1 ? 1.5 + tubeNum * 3 : 3 + tubeNum * 3;
+                        y = 1.5 + 2.6 * layerNum + (22.5 + 8.2) * chambNum;
+                    }
+                    if (chambNum == 2)
+                    {
+                        x = layerNum == 1 ? 1.5 + tubeNum * 3 : 3 + tubeNum * 3 - meanc3_b_diffs;
+                        y = 1.5 + 2.6 * layerNum + (22.5 + 8.2) * chambNum;
+
+                        x = (rotationmatc3[0][0] * x + rotationmatc3[0][1] * y);
+                        y = (rotationmatc3[1][0] * x + rotationmatc3[1][1] * y);
+                    }
 
                     TEllipse *el = new TEllipse(x, 69.6 - y, 1.5, 1.5);
 
                     int tubenum = 48 * (chambNum - 1) + 16 * (layerNum - 1) + (tubeNum - 1);
-                    int tubenum2 = 48 * chambNum + 16 * layerNum + tubeNum;
 
                     if (std::find(hittubenums.begin(), hittubenums.end(), tubenum) != hittubenums.end())
                     {
                         int tubeloc = std::find(hittubenums.begin(), hittubenums.end(), tubenum) - hittubenums.begin();
                         float tubetime = hittubetimes.at(tubeloc);
 
-                        float radius = (rfns.at(tubeloc)->Eval(tubetime));
+                        std::cout << "tube time is " << tubetime << std::endl;
+
+                        float radius = rfns.at(tubeloc)->Eval(tubetime);
+
+                        std::cout << "radius is " << radius << std::endl;
 
                         TEllipse *innercircle = new TEllipse(x, 69.6 - y, radius, radius);
 
@@ -273,6 +315,8 @@ int main(int argc, char **argv)
             xvaluesc[i] = (-1. * (a * y + b));
         }
 
+        std::cout << "a_c2 - a_c1 = " << a_c1 - a_c2 << std::endl;
+        std::cout << "a_c2 - a_c3 = " << a_c1 - a_c3 << std::endl;
 
         std::cout << "c1 fit in green, c2 fit in red, c3 fit in blue and fit over all chambers in cyan." << std::endl;
 
@@ -300,6 +344,8 @@ int main(int argc, char **argv)
         c1->Modified();
         c1->Modified();
         c1->Update();
+
+        std::cout << "" << std::endl;
 
         std::cin.get();
         c1->GetListOfPrimitives()->Remove(guh0);

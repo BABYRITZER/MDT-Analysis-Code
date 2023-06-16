@@ -67,7 +67,7 @@ vector<float> getTubeCoords(int chamber, int layer, int tube);
 
 LineParts justfitlines(int setfn = 0);
 
-vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparams, TBranch *branch_a, TBranch *branch_aerr, TBranch *branch_b, TBranch *branch_berr, TBranch *branch_chisq, float meanc1_b_diffs, float meanc3_b_diffs);
+vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparams, TBranch *branch_a, TBranch *branch_aerr, TBranch *branch_b, TBranch *branch_berr, TBranch *branch_chisq, float c1_angle, float c3_angle, float meanc1_b_diffs, float meanc3_b_diffs);
 
 vector<vector<LineParts>> fit_single_chambers(vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparamsc1, LineParts &lineparamsc2, LineParts &lineparamsc3,
 											  TBranch *branch_ac1, TBranch *branch_aerrc1, TBranch *branch_bc1, TBranch *branch_berrc1, TBranch *branch_chisqc1,
@@ -79,4 +79,4 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 									 TBranch *branch_ac1, TBranch *branch_aerrc1, TBranch *branch_bc1, TBranch *branch_berrc1, TBranch *branch_chisqc1,
 									 TBranch *branch_evnumc1);
 
-vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparamsc1, TBranch *branch_bc1, TBranch *branch_berrc1);
+vector<LineParts> fit_single_chamber(int chambernumber, int setfn, double rotationangle, vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparamsc1, TBranch *branch_bc1, TBranch *branch_berrc1);

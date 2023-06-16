@@ -30,6 +30,9 @@ int what_entrynum;
 int main()
 {
 
+	// Create the folder "Output" if it doesn't exist. We are going to put all images and plots in it. Only works on Linux and Mac.
+	system("mkdir -p Output");
+
 	//	TApplication app("Root app", &argc, argv);
 
 	std::cout << "type the run number" << std::endl;
@@ -155,63 +158,144 @@ int main()
 
 	// calibration stuff
 
-	// TODO: fix this angle stuff ------ now i think i just full on refit the lines after adjusting by the angle -- VERY MUCH WIP
-
+	// TODO: the fitting still kinda sucks
+	//////////////////////////////////////////////////////
 	float c2mc1d;
-	vector<float> c2mc1ds;
 	float c2mc3d;
-	vector<float> c2mc3ds;
+
 	TBranch *branch_bdiff_c2_c1 = tree1->Branch("cham2_minus_chamb1_slopes", &c2mc1d);
 	TBranch *branch_bdiff_c2_c3 = tree1->Branch("cham2_minus_chamb3_slopes", &c2mc3d);
 
-	for (int event = 0; event < events.size(); event++)
+	TH1F *twominus1 = new TH1F("SoC2MC1", "Slope of C2 Minus C1", 100, -10, 10);
+	TH1F *twominus3 = new TH1F("SoC2MC3", "Slope of C2 Minus C3", 100, -10, 10);
+
+	std::cout << chamber_fit_params.at(0).size() << " " << chamber_fit_params.at(1).size() << " " << chamber_fit_params.at(2).size() << std::endl;
+
+	for (int i = 0; i < chamber_fit_params.at(1).size(); ++i)
 	{
-		if (chamber_fit_params.at(1).at(event).a != 0 && chamber_fit_params.at(0).at(event).a != 0)
-		{
-			c2mc1d = (chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(0).at(event).a);
-
-			c2mc1ds.push_back(c2mc1d);
-			branch_bdiff_c2_c1->Fill();
-		}
-
-		if ((chamber_fit_params.at(2).at(event).a) != 0 && (chamber_fit_params.at(1).at(event).a) != 0)
-		{
-			c2mc3d = (chamber_fit_params.at(1).at(event).a) - (chamber_fit_params.at(2).at(event).a);
-
-			c2mc3ds.push_back(c2mc3d);
-			branch_bdiff_c2_c3->Fill();
-		}
+		c2mc1d = chamber_fit_params.at(1).at(i).a - chamber_fit_params.at(0).at(i).a;
+		if (c2mc1d != 0)
+			twominus1->Fill(c2mc1d);
+		branch_bdiff_c2_c1->Fill();
 	}
 
-	// fit histograms of these diffs to get the middle
-
-	TH1F *twominus1 = new TH1F("", "h1 title", 200, -30.0, 30.0);
-	TH1F *twominus3 = new TH1F("", "h1 title", 200, -30.0, 30.0);
-
-	for (int i = 0; i < c2mc1ds.size(); i++)
+	for (int i = 0; i < chamber_fit_params.at(1).size(); ++i)
 	{
-		if ((chamber_fit_params.at(1).at(i).a) != 0) 
-		{
-			twominus1->Fill(c2mc1ds.at(i));
-		}
-	}
-	for (int i = 0; i < c2mc3ds.size(); i++)
-	{
-		if ((chamber_fit_params.at(1).at(i).a) != 0) 
-		{
-			twominus3->Fill(c2mc3ds.at(i));
-		}
+		c2mc3d = chamber_fit_params.at(1).at(i).a - chamber_fit_params.at(2).at(i).a;
+		if (c2mc3d != 0)
+			twominus3->Fill(c2mc3d);
+		branch_bdiff_c2_c3->Fill();
 	}
 
 	twominus1->Fit("gaus");
 	twominus3->Fit("gaus");
 
+	TCanvas *cc1 = new TCanvas();
+
+	cc1->Divide(1, 2);
+
+	cc1->cd(1);
+
+	twominus1->SetBit(TH1::kNoStats);
+
+	twominus1->GetFunction("gaus")->Draw();
+	twominus1->GetXaxis()->SetTitle("Chamber 2 and 1 slope difference");
+	twominus1->GetYaxis()->SetTitle("Counts");
+	twominus1->Draw("");
+	cc1->Modified();
+	cc1->Update();
+
+	cc1->cd(2);
+
+	double xvals[100];
+	double yvals[100];
+
+	for (int ibin = 0; ibin <= 100; ++ibin)
+	{
+		double deez = twominus1->GetBinContent(ibin);
+
+		double xm = -10. + (20. * (double)ibin / 100.);
+
+		double res = (deez - twominus1->GetFunction("gaus")->Eval(twominus1->GetBinCenter(ibin)));
+
+		xvals[ibin] = xm;
+		yvals[ibin] = res;
+	}
+
+	TGraph *graph = new TGraph(100, xvals, yvals);
+
+	graph->SetTitle("Fit Residuals");
+	graph->Draw("A*");
+	graph->SetMarkerStyle(3);
+	cc1->Modified();
+	cc1->Update();
+
+	cc1->cd(0);
+	cc1->SaveAs("./Output/slope_diffs_chamber1.png");
+
+	// end c2-c1 stuff
+
+	TCanvas *c2 = new TCanvas();
+
+	c2->Divide(1, 2);
+
+	c2->cd(1);
+
+	twominus3->SetBit(TH1::kNoStats);
+
+	twominus3->GetFunction("gaus")->Draw();
+	twominus3->GetXaxis()->SetTitle("Chamber 2 and 3 slope difference");
+	twominus3->GetYaxis()->SetTitle("Counts");
+	twominus3->Draw("");
+	c2->Modified();
+	c2->Update();
+
+	c2->cd(2);
+
+	// Get residuals
+	double xvals3[100];
+	double yvals3[100];
+
+	for (int ibin = 0; ibin <= 100; ++ibin)
+	{
+		double deez = twominus3->GetBinContent(ibin);
+
+		double xm = -10. + (20. * (double)ibin / 100.);
+
+		double res = (deez - twominus3->GetFunction("gaus")->Eval(twominus3->GetBinCenter(ibin)));
+
+		xvals3[ibin] = xm;
+		yvals3[ibin] = res;
+	}
+
+	TGraph *graph3 = new TGraph(100, xvals3, yvals3);
+
+	graph3->SetTitle("Fit Residuals");
+	graph3->GetYaxis()->SetTitle("Residuals");
+	graph3->GetXaxis()->SetTitle("Chamber 2 and 3 slope difference");
+	graph3->Draw("A*");
+	graph3->SetMarkerStyle(3);
+
+	c2->Modified();
+	c2->Update();
+	// end c2 - c3 stuff
+
+	c2->cd(0);
+	c2->SaveAs("./Output/slope_diffs_chamber3.png");
+
 	// Get the parameter 1 of the fit
 	float meanc1_a_diffs = twominus1->GetFunction("gaus")->GetParameter(1);
 	float meanc3_a_diffs = twominus3->GetFunction("gaus")->GetParameter(1);
 
+	TBranch *branch_afc1 = tree1->Branch("fitted_a_diff_c1", &meanc1_a_diffs);
+	TBranch *branch_afc3 = tree1->Branch("fitted_a_diff_c3", &meanc3_a_diffs);
+
+	branch_afc1->Fill();
+	branch_afc3->Fill();
+
 	std::cout << meanc1_a_diffs << " " << meanc3_a_diffs << " " << std::endl;
 
+	// start doing the b' stuff
 	LineParts c1_f_p;
 	LineParts c3_f_p;
 
@@ -222,46 +306,125 @@ int main()
 	TBranch *branch_bpec3 = tree1->Branch("b'_err_c3", &c3_f_p.berr);
 
 	// c1
-	what_entrynum = 0;
-	for (int i = 0; i < events.size(); i++)
-	{
-		as.push_back(chamber_fit_params.at(0).at(i).a - meanc1_a_diffs); // This is a global variable defined in line_fitting.h 
-	}
-
-	cout << "This is the slow bit" << endl;
-	vector<LineParts> c1bprime = fit_single_chamber(0, 1, events, rfuncs, c1_f_p, branch_bpc1, branch_bpec1);
-	as.clear();
+	vector<LineParts> c1bprimefits = fit_single_chamber(0, 1, atan(meanc1_a_diffs), events, rfuncs, c1_f_p, branch_bpc1, branch_bpec1);
 
 	// c3
-	what_entrynum = 0;
-	for (int i = 0; i < events.size(); i++)
-	{
-		as.push_back(chamber_fit_params.at(2).at(i).a - meanc1_a_diffs); // This is a global variable defined in line_fitting.h 
-	}
-
-	vector<LineParts> c3bprime = fit_single_chamber(2, 1, events, rfuncs, c3_f_p, branch_bpc3, branch_bpec3);
-	as.clear();
-
-	what_entrynum = 0;
+	vector<LineParts> c3bprimefits = fit_single_chamber(2, 1, atan(meanc3_a_diffs), events, rfuncs, c3_f_p, branch_bpc3, branch_bpec3);
 
 	// make histograms of the b
-	TH1F *bprime_chamber1 = new TH1F("", "h1 title", 200, -100., 100.);
-	TH1F *bprime_chamber3 = new TH1F("", "h1 title", 200, -100., 100.);
+	TH1F *bprime_chamber1 = new TH1F("", "h1 title", 100, -2., 2.);
+	TH1F *bprime_chamber3 = new TH1F("", "h1 title", 100, -2., 2.);
+
+	//original settings for these (bad fits) were new TH1F("", "h1 title", 100, -60., 60.);
 
 	for (int i = 0; i < events.size(); i++)
 	{
-		if (c1bprime.at(i).b != 0)
-			bprime_chamber1->Fill(c1bprime.at(i).b);
-		if (c3bprime.at(i).b != 0)
-			bprime_chamber3->Fill(c3bprime.at(i).b);
+		if (c1bprimefits.at(i).b != 0)
+			bprime_chamber1->Fill(chamber_fit_params.at(1).at(i).b - c1bprimefits.at(i).b);
+		if (c3bprimefits.at(i).b != 0)
+			bprime_chamber3->Fill(chamber_fit_params.at(1).at(i).b - c3bprimefits.at(i).b);
 	}
 
 	bprime_chamber1->Fit("gaus");
 	bprime_chamber3->Fit("gaus");
 
+	TCanvas *c3 = new TCanvas("c3", "c3");
+	TCanvas *c4 = new TCanvas("c4", "c4");
+
+	c3->Divide(1, 2);
+	c4->Divide(1, 2);
+
+	c3->cd(1);
+
+	bprime_chamber1->SetBit(TH1::kNoStats);
+
+	bprime_chamber1->SetTitle("Fitted Line Intercepts after Rotation for Chamber 1");
+	bprime_chamber1->GetXaxis()->SetTitle("Line Intercept (cm)");
+	bprime_chamber1->GetYaxis()->SetTitle("Counts");
+	bprime_chamber1->Draw("");
+	bprime_chamber1->GetFunction("gaus")->Draw("same");
+
+	c3->Modified();
+	c3->Update();
+
+	c3->cd(2);
+
+	// Get residuals
+	double xvals4[100];
+	double yvals4[100];
+
+	for (int ibin = 0; ibin <= 100; ++ibin)
+	{
+		double deez = bprime_chamber1->GetBinContent(ibin);
+
+		double xm = bprime_chamber1->GetBinCenter(ibin);
+
+		double res = (deez - bprime_chamber1->GetFunction("gaus")->Eval(bprime_chamber1->GetBinCenter(ibin)));
+
+		xvals4[ibin] = xm;
+		yvals4[ibin] = res;
+	}
+
+	TGraph *graph_bprime_chamber_1 = new TGraph(100, xvals4, yvals4);
+
+	graph_bprime_chamber_1->SetTitle("Fit Residuals");
+	graph_bprime_chamber_1->GetXaxis()->SetTitle("Line Intercept (cm)");
+	graph_bprime_chamber_1->GetYaxis()->SetTitle("Residuals");
+	graph_bprime_chamber_1->Draw("A*");
+
+	graph_bprime_chamber_1->SetMarkerStyle(3);
+
+	c3->Modified();
+	c3->Update();
+
+	c4->cd(1);
+
+	bprime_chamber3->SetBit(TH1::kNoStats);
+
+	bprime_chamber3->SetTitle("Fitted Line Intercepts After Rotation for Chamber 3");
+	bprime_chamber3->GetXaxis()->SetTitle("Line Intercept (cm)");
+	bprime_chamber3->GetYaxis()->SetTitle("Counts");
+	bprime_chamber3->Draw();
+	bprime_chamber3->GetFunction("gaus")->Draw("same");
+
+	c4->Modified();
+
+	c4->cd(2);
+
+	// Get residuals
+
+	double xvals5[100];
+	double yvals5[100];
+
+	for (int ibin = 0; ibin <= 100; ++ibin)
+	{
+		double deez = bprime_chamber3->GetBinContent(ibin);
+
+		double xm = bprime_chamber3->GetBinCenter(ibin);
+
+		double res = (deez - bprime_chamber3->GetFunction("gaus")->Eval(bprime_chamber3->GetBinCenter(ibin)));
+
+		xvals5[ibin] = xm;
+		yvals5[ibin] = res;
+	}
+
+	TGraph *graph_bprime_chamber_3 = new TGraph(100, xvals5, yvals5);
+
+	graph_bprime_chamber_3->SetTitle("Fit Residuals");
+	graph_bprime_chamber_3->GetXaxis()->SetTitle("Line Intercept (cm)");
+	graph_bprime_chamber_3->GetYaxis()->SetTitle("Residuals");
+	graph_bprime_chamber_3->Draw("A*");
+	graph_bprime_chamber_3->SetMarkerStyle(3);
+
+	c4->Modified();
+	c4->Update();
+
+	c3->SaveAs("./Output/bprime_chamber1.png");
+	c4->SaveAs("./Output/bprime_chamber3.png");
+
 	// Get the parameter 1 of the fit
-	float meanc1_b_diffs = twominus1->GetFunction("gaus")->GetParameter(1);
-	float meanc3_b_diffs = twominus3->GetFunction("gaus")->GetParameter(1);
+	float meanc1_b_diffs = bprime_chamber1->GetFunction("gaus")->GetParameter(1);
+	float meanc3_b_diffs = bprime_chamber3->GetFunction("gaus")->GetParameter(1);
 
 	TBranch *branch_bpfc1 = tree1->Branch("fitted_b'_c1", &meanc1_b_diffs);
 	TBranch *branch_bpfc3 = tree1->Branch("fitted_b'_c3", &meanc3_b_diffs);
@@ -269,8 +432,8 @@ int main()
 	branch_bpfc1->Fill();
 	branch_bpfc3->Fill();
 
-
 	// finally, fit all chambers together
+
 	std::cout << "fitting all chambers together " << std::endl;
 
 	LineParts lineparams;
@@ -281,12 +444,23 @@ int main()
 	TBranch *branch_berr = tree1->Branch("berr", &lineparams.berr);
 	TBranch *branch_chisq = tree1->Branch("chisq", &lineparams.chisq);
 
-	vector<LineParts> fittedlines = fit_chamber(events, rfuncs, lineparams, branch_a, branch_aerr, branch_b, branch_berr, branch_chisq, meanc1_b_diffs, meanc3_b_diffs);
+	// TODO: should we be taking arctan here
+	float meanc1_angle =  atan(meanc1_a_diffs);
+	float meanc3_angle = atan(meanc3_a_diffs);
+
+	//meanc1_b_diffs = 0.5;//-0.504;
+	//meanc3_b_diffs = 0.06;//1.01;
+	//testing hard coded offsets -- didnt really help 
+
+	vector<LineParts> fittedlines = fit_chamber(events, rfuncs, lineparams, branch_a, branch_aerr, branch_b, branch_berr, branch_chisq, meanc1_angle, meanc3_angle, meanc1_b_diffs, meanc3_b_diffs);
 
 	// now calculate per tube efficiency
 
 	vector<int> dist_lessthan_counter;
 	vector<int> tube_hit_counter;
+
+	double rotationmatc3[2][2] = {{cos(meanc3_angle), -sin(meanc3_angle)}, {sin(meanc3_angle), cos(meanc3_angle)}};
+	double rotationmatc1[2][2] = {{cos(meanc1_angle), -sin(meanc1_angle)}, {sin(meanc1_angle), cos(meanc1_angle)}};
 
 	for (int i = 0; i < 144; i++)
 	{
@@ -316,8 +490,23 @@ int main()
 				{
 					int tubenum = chamb * 48 + layer * 16 + tube;
 					vector<float> xy = getTubeCoords(chamb, layer, tube);
+					// rotate and shift the xy
+					if (chamb == 0)
+					{
+						xy.at(0) = xy.at(0) - meanc1_b_diffs;
+						xy.at(0) = (rotationmatc1[0][0] * xy.at(0) + rotationmatc1[0][1] * xy.at(1)) ;
+						xy.at(1) = rotationmatc1[1][0] * xy.at(0) + rotationmatc1[1][1] * xy.at(1);
+					}
+					
+					if (chamb == 2)
+					{
+						xy.at(0) =  xy.at(0) - meanc3_b_diffs;
+						xy.at(0) = (rotationmatc3[0][0] * xy.at(0) + rotationmatc3[0][1] * xy.at(1));
+						xy.at(1) = rotationmatc3[1][0] * xy.at(0) + rotationmatc3[1][1] * xy.at(1);
+					}
+
 					double d_line_tube = abs(xy.at(0) + line.a * xy.at(1) + line.b) / sqrt(line.a * line.a + 1);
-					if (d_line_tube < 1.46) // tube radius
+					if (d_line_tube < 1.5) // TODO: tube radius
 					{
 						dist_lessthan_counter.at(tubenum) += 1;
 

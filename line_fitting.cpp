@@ -20,26 +20,6 @@ static double d0_noslope_fit(float x0, float y0, vector<float> a, double *par)
 	return value;
 }
 
-static void fcn2(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
-{
-	const Int_t nbins = xvs.size();
-	Int_t i;
-
-	// calculate chisquare
-	Double_t chisq = 0;
-	Double_t delta;
-	for (i = 0; i < nbins; i++)
-	{
-		float sigma = sigmas.at(i);
-		// delta = (rvs.at(i) - d0_noslope_fit(xvs.at(i), yvs.at(i), as, par)) / (double)sigma;
-		delta = (rvs.at(i) - d0_noslope_fit(xvs.at(i), yvs.at(i), as, par)) / 0.1;
-
-		chisq += delta * delta;
-	}
-
-	f = chisq;
-}
-
 static void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
 {
 	const Int_t nbins = xvs.size();
@@ -53,10 +33,14 @@ static void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t if
 	for (i = 0; i < nbins; i++)
 	{
 		float sigma = sigmas.at(i);
-		// delta = (rvs.at(i) - d0(xvs.at(i), yvs.at(i), par)) / (double)sigma;
-		delta = (rvs.at(i) - d0(xvs.at(i), yvs.at(i), par)) / 0.1;
+
+		// TODO: CHANGED SIGMA ON CHISQUARE
+
+		delta = (rvs.at(i) - d0(xvs.at(i), yvs.at(i), par)) / (double)sigma;
+		// delta = (rvs.at(i) - d0(xvs.at(i), yvs.at(i), par)) / 0.1;
 
 		chisq += delta * delta;
+
 		// sstd::cout << rvs.at(i) << " " << d0(xvs.at(i), yvs.at(i), par) << " " << xvs.at(i) << " " << yvs.at(i) << " " << par[0] << " " << par[1] << std::endl;
 	}
 	// std::cout << "chisq is " << chisq << std::endl;
@@ -66,21 +50,22 @@ static void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t if
 LineParts justfitlines(int setfn)
 {
 	TMinuit *gMinuit = new TMinuit(2);
+	// TODO: changed print level of minuit
 	gMinuit->SetPrintLevel(-1);
-	if (setfn == 0)
-		gMinuit->SetFCN(fcn);
-	else
-		gMinuit->SetFCN(fcn2);
+	gMinuit->SetFCN(fcn);
 
 	Double_t arglist[10];
 	Int_t ierflg = 0;
 
 	arglist[0] = 2;
 	gMinuit->mnexcm("SET ERR", arglist, 1, ierflg);
-	/// gMinuit->SetErrorDef(1);
+	// TODO: TRYING THIS, WHATEVER IT IS
+	gMinuit->SetErrorDef(1);
 
 	// Set starting values and step sizes for parameters
-	static Double_t vstart[2] = {0, 25};
+	// static Double_t vstart[2] = {0, 25};
+	static Double_t vstart[2] = {0, 0};
+	// TODO: TESTING IF STARTING AT 0 0 GETS RID OF THE WEIRD ASS BUMP
 	static Double_t step[2] = {0.001, 0.001};
 	if (setfn == 0)
 	{
@@ -94,7 +79,9 @@ LineParts justfitlines(int setfn)
 
 	// Now ready for minimization step
 	arglist[0] = 1000000;
-	arglist[1] = 1.;
+	// TODO: CHANGED MINIMIZATION TOLERANCE -- before it was like 1
+	arglist[1] = 0.00001;
+
 	gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
 
 	LineParts loine;
@@ -155,8 +142,11 @@ vector<float> getTubeCoords(int chamber, int layer, int tube)
 	return coord;
 }
 
+// TODO: i think that maybe the fitting is whats making everything kind of go bad but i am not sure i need to subtract or rotate first
+
 // This is the function that fits the lines for each chamber. Does all at once.
-vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparams, TBranch *branch_a, TBranch *branch_aerr, TBranch *branch_b, TBranch *branch_berr, TBranch *branch_chisq, float meanc1_b_diffs, float meanc3_b_diffs)
+// vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparams, TBranch *branch_a, TBranch *branch_aerr, TBranch *branch_b, TBranch *branch_berr, TBranch *branch_chisq, float meanc1_angle, float meanc3_angle, float meanc1_b_diffs, float meanc3_b_diffs)
+vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparams, TBranch *branch_a, TBranch *branch_aerr, TBranch *branch_b, TBranch *branch_berr, TBranch *branch_chisq, float c1_angle, float c3_angle, float meanc1_b_diffs, float meanc3_b_diffs)
 {
 	vector<LineParts> lines;
 	std::cout << "fitting " << events.size() << " lines for the whole apparatus " << std::endl;
@@ -168,6 +158,9 @@ vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineP
 
 		int hitsnum = events.at(i).t.size();
 
+		double rotationmatc1[2][2] = {{cos(c1_angle), -sin(c1_angle)}, {sin(c1_angle), cos(c1_angle)}};
+		double rotationmatc3[2][2] = {{cos(c3_angle), -sin(c3_angle)}, {sin(c3_angle), cos(c3_angle)}};
+
 		for (int j = 0; j < hitsnum; j++)
 		{
 
@@ -175,14 +168,36 @@ vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineP
 			{
 
 				float time = events.at(i).t.at(j);
-
+				// TODO: DO WE ROTATE OR TRANSLATE FIRST
 				vector<float> xy = getTubeCoords(events.at(i).chamber.at(j), events.at(i).layer.at(j), events.at(i).tube.at(j));
 
-				if (events.at(i).chamber.at(j) == 0)
-					xy.at(0) = xy.at(0) - meanc1_b_diffs;
+				// rotation first
+				/*
+								if (events.at(i).chamber.at(j) == 0)
+								{
+									xy.at(0) = (rotationmatc1[0][0] * xy.at(0) + rotationmatc1[0][1] * xy.at(1)) - meanc1_b_diffs;
+									xy.at(1) = rotationmatc1[1][0] * xy.at(0) + rotationmatc1[1][1] * xy.at(1);
+								}
+								if (events.at(i).chamber.at(j) == 2)
+								{
+									xy.at(0) = (rotationmatc3[0][0] * xy.at(0) + rotationmatc3[0][1] * xy.at(1)) - meanc3_b_diffs;
+									xy.at(1) = rotationmatc3[1][0] * xy.at(0) + rotationmatc3[1][1] * xy.at(1);
+								}
+				*/
 
+				// translation first
+				if (events.at(i).chamber.at(j) == 0)
+				{
+					xy.at(0) = xy.at(0) - meanc1_b_diffs;
+					xy.at(0) = (rotationmatc1[0][0] * xy.at(0) + rotationmatc1[0][1] * xy.at(1));
+					xy.at(1) = rotationmatc1[1][0] * xy.at(0) + rotationmatc1[1][1] * xy.at(1);
+				}
 				if (events.at(i).chamber.at(j) == 2)
-					xy.at(0) = xy.at(0) - meanc3_b_diffs;
+				{
+					xy.at(0) = xy.at(0) - meanc1_b_diffs;
+					xy.at(0) = (rotationmatc3[0][0] * xy.at(0) + rotationmatc3[0][1] * xy.at(1)) - meanc3_b_diffs;
+					xy.at(1) = rotationmatc3[1][0] * xy.at(0) + rotationmatc3[1][1] * xy.at(1);
+				}
 
 				int tubenum = events.at(i).chamber.at(j) * 48 + events.at(i).layer.at(j) * 16 + events.at(i).tube.at(j);
 
@@ -233,9 +248,6 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 	LineParts guh;
 
 	for (int i = 0; i < events.size(); i++)
-		c1fits.push_back(guh);
-
-	for (int i = 0; i < events.size(); i++)
 	{
 
 		if (i % 5000 == 0)
@@ -260,7 +272,12 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 			}
 		}
 
+		LineParts wow;
+		lineparamsc1 = wow;
+		// TODO: HAVE SET IT SO THAT IT ONLY FITS LINES IF THERE ARE MORE THAN OR EQUAL TO TWO POINTS IN THE CHAMBER
+		// if (xvs.size() > 2)
 		lineparamsc1 = justfitlines(setfn);
+
 		lineparamsc1.eventNum = i;
 
 		branch_ac1->Fill();
@@ -281,8 +298,8 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 	return c1fits;
 }
 
-// SINGLE CHAMBER FIT, RETURNS ONLY INTERCEPT
-vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparamsc1, TBranch *branch_bc1, TBranch *branch_berrc1)
+// SINGLE CHAMBER FIT, RETURNS ONLY INTERCEPT ---->ROTATION
+vector<LineParts> fit_single_chamber(int chambernumber, int setfn, double rotationangle, vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparamsc1, TBranch *branch_bc1, TBranch *branch_berrc1)
 {
 
 	std::cout << "fitting " << events.size() << " lines for chamber " << chambernumber << std::endl;
@@ -295,10 +312,7 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 		c1fits.push_back(wow);
 	}
 
-	LineParts guh;
-
-	for (int i = 0; i < events.size(); i++)
-		c1fits.push_back(guh);
+	double rotationmat[2][2] = {{cos(rotationangle), -sin(rotationangle)}, {sin(rotationangle), cos(rotationangle)}};
 
 	for (int i = 0; i < events.size(); i++)
 	{
@@ -308,12 +322,6 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 
 		int numhits = events.at(i).t.size();
 
-		if (as.at(i) == 0)
-		{
-			what_entrynum += 1;
-			continue;
-		}
-
 		for (int j = 0; j < numhits; j++)
 		{
 			if (events.at(i).chamber.at(j) == chambernumber && events.at(i).is_inlier.at(j) == 1)
@@ -321,6 +329,9 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 				float time = events.at(i).t.at(j);
 
 				vector<float> xy = getTubeCoords(events.at(i).chamber.at(j), events.at(i).layer.at(j), events.at(i).tube.at(j));
+
+				xy.at(0) = rotationmat[0][0] * xy.at(0) + rotationmat[0][1] * xy.at(1);
+				xy.at(1) = rotationmat[1][0] * xy.at(0) + rotationmat[1][1] * xy.at(1);
 
 				int tubenum = events.at(i).chamber.at(j) * 48 + events.at(i).layer.at(j) * 16 + events.at(i).tube.at(j);
 
