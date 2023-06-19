@@ -205,7 +205,7 @@ vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineP
 				yvs.push_back(xy.at(1));
 
 				rvs.push_back(rfuncs.at(tubenum).Eval(time - extern_t0s.at(tubenum)));
-				sigmas.push_back(rfuncs.at(tubenum).Derivative(time - extern_t0s.at(tubenum)) * 10.);
+				sigmas.push_back(rfuncs.at(tubenum).Derivative(time - extern_t0s.at(tubenum)) * 25. / sqrt(12.));
 			}
 		}
 
@@ -230,6 +230,7 @@ vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, LineP
 }
 
 // SINGLE CHAMBER FIT, RETURNS EVERY PARAMETER INTO A BRANCH
+// ONLY FITS IF THE CHAMBER HAS ALL THREE HITS
 vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEvent> events, vector<TF1> rfuncs, LineParts &lineparamsc1,
 									 TBranch *branch_ac1, TBranch *branch_aerrc1, TBranch *branch_bc1, TBranch *branch_berrc1, TBranch *branch_chisqc1,
 									 TBranch *branch_evnumc1)
@@ -253,30 +254,43 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 		if (i % 5000 == 0)
 			std::cout << "you are at fit for event " << i << " of " << events.size() << std::endl;
 
+		LineParts wow;
+
 		int numhits = events.at(i).t.size();
 
-		for (int j = 0; j < numhits; j++)
+		int chambhits = 0;
+		for (int z = 0; z < numhits; ++z)
 		{
-			if (events.at(i).chamber.at(j) == chambernumber && events.at(i).is_inlier.at(j) == 1)
-			{
-				float time = events.at(i).t.at(j);
-
-				vector<float> xy = getTubeCoords(events.at(i).chamber.at(j), events.at(i).layer.at(j), events.at(i).tube.at(j));
-
-				int tubenum = events.at(i).chamber.at(j) * 48 + events.at(i).layer.at(j) * 16 + events.at(i).tube.at(j);
-
-				xvs.push_back(xy.at(0));
-				yvs.push_back(xy.at(1));
-				rvs.push_back(rfuncs.at(tubenum).Eval(time - extern_t0s.at(tubenum)));
-				sigmas.push_back(rfuncs.at(tubenum).Derivative(time - extern_t0s.at(tubenum)) * 10.);
-			}
+			if (events.at(i).chamber.at(z) == chambernumber)
+				chambhits = chambhits + 1;
 		}
 
-		LineParts wow;
+		if (chambhits == 3)
+		{
+			for (int j = 0; j < numhits; j++)
+			{
+				if (events.at(i).chamber.at(j) == chambernumber && events.at(i).is_inlier.at(j) == 1)
+				{
+
+					float time = events.at(i).t.at(j);
+
+					vector<float> xy = getTubeCoords(events.at(i).chamber.at(j), events.at(i).layer.at(j), events.at(i).tube.at(j));
+
+					int tubenum = events.at(i).chamber.at(j) * 48 + events.at(i).layer.at(j) * 16 + events.at(i).tube.at(j);
+
+					xvs.push_back(xy.at(0));
+					yvs.push_back(xy.at(1));
+					rvs.push_back(rfuncs.at(tubenum).Eval(time - extern_t0s.at(tubenum)));
+					sigmas.push_back(rfuncs.at(tubenum).Derivative(time - extern_t0s.at(tubenum)) * 25. / sqrt(12.));
+				}
+			}
+
+			// TODO: HAVE SET IT SO THAT IT ONLY FITS LINES IF THERE ARE MORE THAN OR EQUAL TO TWO POINTS IN THE CHAMBER
+			// if (xvs.size() > 2)
+			wow = justfitlines(setfn);
+		}
+
 		lineparamsc1 = wow;
-		// TODO: HAVE SET IT SO THAT IT ONLY FITS LINES IF THERE ARE MORE THAN OR EQUAL TO TWO POINTS IN THE CHAMBER
-		// if (xvs.size() > 2)
-		lineparamsc1 = justfitlines(setfn);
 
 		lineparamsc1.eventNum = i;
 
@@ -316,33 +330,47 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, double rotati
 
 	for (int i = 0; i < events.size(); i++)
 	{
+		LineParts wow;
 
 		if (i % 5000 == 0)
 			std::cout << "you are at fit for event " << i << " of " << events.size() << std::endl;
 
 		int numhits = events.at(i).t.size();
 
-		for (int j = 0; j < numhits; j++)
+		int chambhits = 0;
+		for (int z = 0; z < numhits; ++z)
 		{
-			if (events.at(i).chamber.at(j) == chambernumber && events.at(i).is_inlier.at(j) == 1)
-			{
-				float time = events.at(i).t.at(j);
-
-				vector<float> xy = getTubeCoords(events.at(i).chamber.at(j), events.at(i).layer.at(j), events.at(i).tube.at(j));
-
-				xy.at(0) = rotationmat[0][0] * xy.at(0) + rotationmat[0][1] * xy.at(1);
-				xy.at(1) = rotationmat[1][0] * xy.at(0) + rotationmat[1][1] * xy.at(1);
-
-				int tubenum = events.at(i).chamber.at(j) * 48 + events.at(i).layer.at(j) * 16 + events.at(i).tube.at(j);
-
-				xvs.push_back(xy.at(0));
-				yvs.push_back(xy.at(1));
-				rvs.push_back(rfuncs.at(tubenum).Eval(time - extern_t0s.at(tubenum)));
-				sigmas.push_back(rfuncs.at(tubenum).Derivative(time - extern_t0s.at(tubenum)) * 10.);
-			}
+			if (events.at(i).chamber.at(z) == chambernumber)
+				chambhits = chambhits + 1;
 		}
 
-		lineparamsc1 = justfitlines(setfn);
+		if (chambhits == 3)
+		{
+			for (int j = 0; j < numhits; j++)
+			{
+				if (events.at(i).chamber.at(j) == chambernumber && events.at(i).is_inlier.at(j) == 1)
+				{
+					float time = events.at(i).t.at(j);
+
+					vector<float> xy = getTubeCoords(events.at(i).chamber.at(j), events.at(i).layer.at(j), events.at(i).tube.at(j));
+
+					xy.at(0) = rotationmat[0][0] * xy.at(0) + rotationmat[0][1] * xy.at(1);
+					xy.at(1) = rotationmat[1][0] * xy.at(0) + rotationmat[1][1] * xy.at(1);
+
+					int tubenum = events.at(i).chamber.at(j) * 48 + events.at(i).layer.at(j) * 16 + events.at(i).tube.at(j);
+
+					xvs.push_back(xy.at(0));
+					yvs.push_back(xy.at(1));
+					rvs.push_back(rfuncs.at(tubenum).Eval(time - extern_t0s.at(tubenum)));
+					sigmas.push_back(rfuncs.at(tubenum).Derivative(time - extern_t0s.at(tubenum)) * 25. / sqrt(12.));
+				}
+			}
+
+			wow = justfitlines(setfn);
+		}
+
+		lineparamsc1 = wow;
+
 		lineparamsc1.eventNum = i;
 
 		branch_bc1->Fill();

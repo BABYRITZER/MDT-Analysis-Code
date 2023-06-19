@@ -27,9 +27,9 @@ Fittedt0s fit_t0(vector<float> times, int chambnum)
 	fitfn->SetParameters(1, t0_guess, 4000);
 
 	// here we fit
-	h->SetBit(TH1::kNoStats);
+	//h->SetBit(TH1::kNoStats);
 	h->Fit(fitfn, "0", "S", t0_guess - 300., t0_guess + 10);
-	h->ResetBit(TH1::kNoStats);
+	//h->ResetBit(TH1::kNoStats);
 
 	double xmin;
 	double xmax;
@@ -59,7 +59,7 @@ Fittedt0s fit_t0(vector<float> times, int chambnum)
 	c1->Divide(1, 2);
 	c1->cd(1);
 
-	h->SetBit(TH1::kNoStats);
+	//h->SetBit(TH1::kNoStats);
 
 	h->Draw("");
 	c1->Modified();
@@ -101,7 +101,7 @@ Fittedt0s fit_t0(vector<float> times, int chambnum)
 
 	c1->SaveAs(titleFullPath.c_str());
 
-	h->ResetBit(TH1::kNoStats);
+	//h->ResetBit(TH1::kNoStats);
 
 	// get parameters from fits
 	double t0;

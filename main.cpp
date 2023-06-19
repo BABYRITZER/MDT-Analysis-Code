@@ -4,6 +4,7 @@
 #include "fitt0s.h"
 #include "gransac_implementations.h"
 #include <TApplication.h>
+#include <TStyle.h>
 
 #include <TFile.h>
 #include <TTree.h>
@@ -32,6 +33,8 @@ int main()
 
 	// Create the folder "Output" if it doesn't exist. We are going to put all images and plots in it. Only works on Linux and Mac.
 	system("mkdir -p Output");
+
+	gStyle->SetOptFit();
 
 	//	TApplication app("Root app", &argc, argv);
 
@@ -158,35 +161,73 @@ int main()
 
 	// calibration stuff
 
-	// TODO: the fitting still kinda sucks
-	//////////////////////////////////////////////////////
 	float c2mc1d;
 	float c2mc3d;
 
 	TBranch *branch_bdiff_c2_c1 = tree1->Branch("cham2_minus_chamb1_slopes", &c2mc1d);
 	TBranch *branch_bdiff_c2_c3 = tree1->Branch("cham2_minus_chamb3_slopes", &c2mc3d);
 
-	TH1F *twominus1 = new TH1F("SoC2MC1", "Slope of C2 Minus C1", 100, -10, 10);
-	TH1F *twominus3 = new TH1F("SoC2MC3", "Slope of C2 Minus C3", 100, -10, 10);
+	TH1F *twominus1 = new TH1F("SoC2MC1", "Slope of C2 Minus C1", 200, -2 * 3.14, 2 * 3.14);
+	TH1F *twominus3 = new TH1F("SoC2MC3", "Slope of C2 Minus C3", 200, -2 * 3.14, 2 * 3.14);
 
-	std::cout << chamber_fit_params.at(0).size() << " " << chamber_fit_params.at(1).size() << " " << chamber_fit_params.at(2).size() << std::endl;
+	TH1F *c1intercepts = new TH1F("c1int", "C2-C1 Unadjusted Fit Intercepts", 200, -50, 50);
+	TH1F *c3intercepts = new TH1F("c3int", "C2-C3 Unadjusted Fit Intercepts", 200, -50, 50);
 
+	// TODO: NOW I AM TAKING ARCTANS HERE
 	for (int i = 0; i < chamber_fit_params.at(1).size(); ++i)
 	{
-		c2mc1d = chamber_fit_params.at(1).at(i).a - chamber_fit_params.at(0).at(i).a;
-		if (c2mc1d != 0)
+		// to ignore if fit failed or if the fn didnt fit cuz not enough hits
+		if (chamber_fit_params.at(1).at(i).a != 0 && chamber_fit_params.at(0).at(i).a != 0)
+		{
+			c2mc1d = atan(chamber_fit_params.at(1).at(i).a) - atan(chamber_fit_params.at(0).at(i).a);
 			twominus1->Fill(c2mc1d);
-		branch_bdiff_c2_c1->Fill();
+			branch_bdiff_c2_c1->Fill();
+		}
 	}
 
 	for (int i = 0; i < chamber_fit_params.at(1).size(); ++i)
 	{
-		c2mc3d = chamber_fit_params.at(1).at(i).a - chamber_fit_params.at(2).at(i).a;
-		if (c2mc3d != 0)
+		// to ignore if fit failed or if the fn didnt fit cuz not enough hits
+		if (chamber_fit_params.at(1).at(i).a != 0 && chamber_fit_params.at(2).at(i).a != 0)
+		{
+			c2mc3d = atan(chamber_fit_params.at(1).at(i).a) - atan(chamber_fit_params.at(2).at(i).a);
 			twominus3->Fill(c2mc3d);
-		branch_bdiff_c2_c3->Fill();
+			branch_bdiff_c2_c3->Fill();
+		}
 	}
 
+	for (int i = 0; i < chamber_fit_params.at(1).size(); ++i)
+	{
+		if (chamber_fit_params.at(1).at(i).b != 0 && chamber_fit_params.at(0).at(i).b != 0)
+			c1intercepts->Fill(chamber_fit_params.at(1).at(i).b - chamber_fit_params.at(0).at(i).b);
+
+		if (chamber_fit_params.at(1).at(i).b != 0 && chamber_fit_params.at(2).at(i).b != 0)
+			c3intercepts->Fill(chamber_fit_params.at(1).at(i).b - chamber_fit_params.at(2).at(i).b);
+	}
+
+	TCanvas *c1int = new TCanvas();
+
+	c1intercepts->GetXaxis()->SetTitle("Fitted Intercepts of Chamber 2 - Chamber 1 Before Angle Adjustment (cm)");
+	c1intercepts->GetYaxis()->SetTitle("Counts");
+	c1intercepts->Draw("");
+	c1int->Modified();
+	c1int->Update();
+
+	c1int->SaveAs("./Output/c1intercepts_noangle.png");
+	c1int->Close();
+
+	TCanvas *c3int = new TCanvas();
+
+	c3intercepts->GetXaxis()->SetTitle("Fitted Intercepts of Chamber 2 - Chamber 1 Before Angle Adjustment (cm)");
+	c3intercepts->GetYaxis()->SetTitle("Counts");
+	c3intercepts->Draw("");
+	c3int->Modified();
+	c3int->Update();
+
+	c3int->SaveAs("./Output/c3intercepts_noangle.png");
+	c3int->Close();
+
+	// fitting the slope diffs
 	twominus1->Fit("gaus");
 	twominus3->Fit("gaus");
 
@@ -196,10 +237,10 @@ int main()
 
 	cc1->cd(1);
 
-	twominus1->SetBit(TH1::kNoStats);
+	//twominus1->SetBit(TH1::kNoStats);
 
 	twominus1->GetFunction("gaus")->Draw();
-	twominus1->GetXaxis()->SetTitle("Chamber 2 and 1 slope difference");
+	twominus1->GetXaxis()->SetTitle("Chamber 2 and 1 slope difference (rad)");
 	twominus1->GetYaxis()->SetTitle("Counts");
 	twominus1->Draw("");
 	cc1->Modified();
@@ -207,14 +248,14 @@ int main()
 
 	cc1->cd(2);
 
-	double xvals[100];
-	double yvals[100];
+	double xvals[200];
+	double yvals[200];
 
-	for (int ibin = 0; ibin <= 100; ++ibin)
+	for (int ibin = 0; ibin <= 200; ++ibin)
 	{
 		double deez = twominus1->GetBinContent(ibin);
-
-		double xm = -10. + (20. * (double)ibin / 100.);
+		// TODO: check that this is correct
+		double xm = -(2 * 3.14) + (4 * 3.14 * (double)ibin / 200.);
 
 		double res = (deez - twominus1->GetFunction("gaus")->Eval(twominus1->GetBinCenter(ibin)));
 
@@ -222,7 +263,7 @@ int main()
 		yvals[ibin] = res;
 	}
 
-	TGraph *graph = new TGraph(100, xvals, yvals);
+	TGraph *graph = new TGraph(200, xvals, yvals);
 
 	graph->SetTitle("Fit Residuals");
 	graph->Draw("A*");
@@ -241,10 +282,10 @@ int main()
 
 	c2->cd(1);
 
-	twominus3->SetBit(TH1::kNoStats);
+	// twominus3->SetBit(TH1::kNoStats);
 
 	twominus3->GetFunction("gaus")->Draw();
-	twominus3->GetXaxis()->SetTitle("Chamber 2 and 3 slope difference");
+	twominus3->GetXaxis()->SetTitle("Chamber 2 and 3 slope difference (rad)");
 	twominus3->GetYaxis()->SetTitle("Counts");
 	twominus3->Draw("");
 	c2->Modified();
@@ -253,14 +294,14 @@ int main()
 	c2->cd(2);
 
 	// Get residuals
-	double xvals3[100];
-	double yvals3[100];
+	double xvals3[200];
+	double yvals3[200];
 
-	for (int ibin = 0; ibin <= 100; ++ibin)
+	for (int ibin = 0; ibin <= 200; ++ibin)
 	{
 		double deez = twominus3->GetBinContent(ibin);
-
-		double xm = -10. + (20. * (double)ibin / 100.);
+		// TODO::check this is ok
+		double xm = -(2 * 3.14) + (4 * 3.14 * (double)ibin / 200.);
 
 		double res = (deez - twominus3->GetFunction("gaus")->Eval(twominus3->GetBinCenter(ibin)));
 
@@ -268,7 +309,7 @@ int main()
 		yvals3[ibin] = res;
 	}
 
-	TGraph *graph3 = new TGraph(100, xvals3, yvals3);
+	TGraph *graph3 = new TGraph(200, xvals3, yvals3);
 
 	graph3->SetTitle("Fit Residuals");
 	graph3->GetYaxis()->SetTitle("Residuals");
@@ -306,16 +347,17 @@ int main()
 	TBranch *branch_bpec3 = tree1->Branch("b'_err_c3", &c3_f_p.berr);
 
 	// c1
-	vector<LineParts> c1bprimefits = fit_single_chamber(0, 1, atan(meanc1_a_diffs), events, rfuncs, c1_f_p, branch_bpc1, branch_bpec1);
+	vector<LineParts> c1bprimefits = fit_single_chamber(0, 1, meanc1_a_diffs, events, rfuncs, c1_f_p, branch_bpc1, branch_bpec1);
 
 	// c3
-	vector<LineParts> c3bprimefits = fit_single_chamber(2, 1, atan(meanc3_a_diffs), events, rfuncs, c3_f_p, branch_bpc3, branch_bpec3);
+	vector<LineParts> c3bprimefits = fit_single_chamber(2, 1, meanc3_a_diffs, events, rfuncs, c3_f_p, branch_bpc3, branch_bpec3);
 
 	// make histograms of the b
-	TH1F *bprime_chamber1 = new TH1F("", "h1 title", 100, -2., 2.);
-	TH1F *bprime_chamber3 = new TH1F("", "h1 title", 100, -2., 2.);
+	TH1F *bprime_chamber1 = new TH1F("", "h1 title", 200, -3, 3);
+	TH1F *bprime_chamber3 = new TH1F("", "h1 title", 200, -8, 8);
 
-	//original settings for these (bad fits) were new TH1F("", "h1 title", 100, -60., 60.);
+	// original settings for these (bad fits) were new TH1F("", "h1 title", 100, -60., 60.);
+	// after changed range to -2,2
 
 	for (int i = 0; i < events.size(); i++)
 	{
@@ -336,9 +378,9 @@ int main()
 
 	c3->cd(1);
 
-	bprime_chamber1->SetBit(TH1::kNoStats);
+	//bprime_chamber1->SetBit(TH1::kNoStats);
 
-	bprime_chamber1->SetTitle("Fitted Line Intercepts after Rotation for Chamber 1");
+	bprime_chamber1->SetTitle("Fitted Line Intercepts Difference wrt Chamber 2 after Rotation for Chamber 1");
 	bprime_chamber1->GetXaxis()->SetTitle("Line Intercept (cm)");
 	bprime_chamber1->GetYaxis()->SetTitle("Counts");
 	bprime_chamber1->Draw("");
@@ -350,10 +392,10 @@ int main()
 	c3->cd(2);
 
 	// Get residuals
-	double xvals4[100];
-	double yvals4[100];
+	double xvals4[200];
+	double yvals4[200];
 
-	for (int ibin = 0; ibin <= 100; ++ibin)
+	for (int ibin = 0; ibin <= 200; ++ibin)
 	{
 		double deez = bprime_chamber1->GetBinContent(ibin);
 
@@ -365,7 +407,7 @@ int main()
 		yvals4[ibin] = res;
 	}
 
-	TGraph *graph_bprime_chamber_1 = new TGraph(100, xvals4, yvals4);
+	TGraph *graph_bprime_chamber_1 = new TGraph(200, xvals4, yvals4);
 
 	graph_bprime_chamber_1->SetTitle("Fit Residuals");
 	graph_bprime_chamber_1->GetXaxis()->SetTitle("Line Intercept (cm)");
@@ -379,9 +421,9 @@ int main()
 
 	c4->cd(1);
 
-	bprime_chamber3->SetBit(TH1::kNoStats);
+	//bprime_chamber3->SetBit(TH1::kNoStats);
 
-	bprime_chamber3->SetTitle("Fitted Line Intercepts After Rotation for Chamber 3");
+	bprime_chamber3->SetTitle("Fitted Line Intercepts Difference wrt Chamber 2 After Rotation for Chamber 3");
 	bprime_chamber3->GetXaxis()->SetTitle("Line Intercept (cm)");
 	bprime_chamber3->GetYaxis()->SetTitle("Counts");
 	bprime_chamber3->Draw();
@@ -393,10 +435,10 @@ int main()
 
 	// Get residuals
 
-	double xvals5[100];
-	double yvals5[100];
+	double xvals5[200];
+	double yvals5[200];
 
-	for (int ibin = 0; ibin <= 100; ++ibin)
+	for (int ibin = 0; ibin <= 200; ++ibin)
 	{
 		double deez = bprime_chamber3->GetBinContent(ibin);
 
@@ -408,7 +450,7 @@ int main()
 		yvals5[ibin] = res;
 	}
 
-	TGraph *graph_bprime_chamber_3 = new TGraph(100, xvals5, yvals5);
+	TGraph *graph_bprime_chamber_3 = new TGraph(200, xvals5, yvals5);
 
 	graph_bprime_chamber_3->SetTitle("Fit Residuals");
 	graph_bprime_chamber_3->GetXaxis()->SetTitle("Line Intercept (cm)");
@@ -445,12 +487,12 @@ int main()
 	TBranch *branch_chisq = tree1->Branch("chisq", &lineparams.chisq);
 
 	// TODO: should we be taking arctan here
-	float meanc1_angle =  atan(meanc1_a_diffs);
-	float meanc3_angle = atan(meanc3_a_diffs);
+	float meanc1_angle = meanc1_a_diffs;
+	float meanc3_angle = meanc3_a_diffs;
 
-	//meanc1_b_diffs = 0.5;//-0.504;
-	//meanc3_b_diffs = 0.06;//1.01;
-	//testing hard coded offsets -- didnt really help 
+	// meanc1_b_diffs = 0.5;//-0.504;
+	// meanc3_b_diffs = 0.06;//1.01;
+	// testing hard coded offsets -- didnt really help
 
 	vector<LineParts> fittedlines = fit_chamber(events, rfuncs, lineparams, branch_a, branch_aerr, branch_b, branch_berr, branch_chisq, meanc1_angle, meanc3_angle, meanc1_b_diffs, meanc3_b_diffs);
 
@@ -494,13 +536,13 @@ int main()
 					if (chamb == 0)
 					{
 						xy.at(0) = xy.at(0) - meanc1_b_diffs;
-						xy.at(0) = (rotationmatc1[0][0] * xy.at(0) + rotationmatc1[0][1] * xy.at(1)) ;
+						xy.at(0) = (rotationmatc1[0][0] * xy.at(0) + rotationmatc1[0][1] * xy.at(1));
 						xy.at(1) = rotationmatc1[1][0] * xy.at(0) + rotationmatc1[1][1] * xy.at(1);
 					}
-					
+
 					if (chamb == 2)
 					{
-						xy.at(0) =  xy.at(0) - meanc3_b_diffs;
+						xy.at(0) = xy.at(0) - meanc3_b_diffs;
 						xy.at(0) = (rotationmatc3[0][0] * xy.at(0) + rotationmatc3[0][1] * xy.at(1));
 						xy.at(1) = rotationmatc3[1][0] * xy.at(0) + rotationmatc3[1][1] * xy.at(1);
 					}
