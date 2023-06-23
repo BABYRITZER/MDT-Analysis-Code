@@ -309,10 +309,10 @@ int main(int argc, char **argv)
             y = ((float)i * 69.6) / ((float)bins);
             yvalues[i] = y;
 
-            xvaluesc1[i] = (-1. * (a_c1 * y + b_c1));
-            xvaluesc2[i] = (-1. * (a_c2 * y + b_c2));
-            xvaluesc3[i] = (-1. * (a_c3 * y + b_c3));
-            xvaluesc[i] = (-1. * (a * y + b));
+            xvaluesc1[i] = (-1. * (a_c1 * y - b_c1));
+            xvaluesc2[i] = (-1. * (a_c2 * y - b_c2));
+            xvaluesc3[i] = (-1. * (a_c3 * y - b_c3));
+            xvaluesc[i] = (-1. * (a * y - b));
         }
 
         std::cout << "a_c2 - a_c1 = " << a_c1 - a_c2 << std::endl;

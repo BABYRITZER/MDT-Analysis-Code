@@ -487,12 +487,11 @@ int main()
 	TBranch *branch_chisq = tree1->Branch("chisq", &lineparams.chisq);
 
 	// TODO: should we be taking arctan here
-	float meanc1_angle = meanc1_a_diffs;
-	float meanc3_angle = meanc3_a_diffs;
+	float meanc1_angle = 0;//meanc1_a_diffs;
+	float meanc3_angle = 0;//meanc3_a_diffs;
 
-	// meanc1_b_diffs = 0.5;//-0.504;
-	// meanc3_b_diffs = 0.06;//1.01;
-	// testing hard coded offsets -- didnt really help
+	meanc1_b_diffs = 0; //0.5;//-0.504;
+	meanc3_b_diffs = 0; //0.06;//1.01;
 
 	vector<LineParts> fittedlines = fit_chamber(events, rfuncs, lineparams, branch_a, branch_aerr, branch_b, branch_berr, branch_chisq, meanc1_angle, meanc3_angle, meanc1_b_diffs, meanc3_b_diffs);
 
@@ -547,7 +546,7 @@ int main()
 						xy.at(1) = rotationmatc3[1][0] * xy.at(0) + rotationmatc3[1][1] * xy.at(1);
 					}
 
-					double d_line_tube = abs(xy.at(0) + line.a * xy.at(1) + line.b) / sqrt(line.a * line.a + 1);
+					double d_line_tube = abs(xy.at(0) + line.a * xy.at(1) - line.b) / sqrt(line.a * line.a + 1);
 					if (d_line_tube < 1.5) // TODO: tube radius
 					{
 						dist_lessthan_counter.at(tubenum) += 1;

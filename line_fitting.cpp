@@ -4,21 +4,11 @@ static double d0(float x0, float y0, double *par)
 {
 	// params are in form ax + by + c = 0 ------> (-1/b)*(ax + c) = y
 
-	//	double value = abs(par[0] * x0 + par[1] * y0 + 1) / sqrt(par[0] * par[0] + par[1] * par[1]);
-	double value = abs(x0 + par[0] * y0 + par[1]) / sqrt(par[0] * par[0] + 1);
+	double value = abs(x0 + par[0] * y0 - par[1]) / sqrt(par[0] * par[0] + 1.);
 
 	return value;
 }
 
-static double d0_noslope_fit(float x0, float y0, vector<float> a, double *par)
-{
-	// params are in form ax + y + c = 0 ------> (-ax - c) = y
-
-	//	double value = abs(par[0] * x0 + par[1] * y0 + 1) / sqrt(par[0] * par[0] + par[1] * par[1]);
-	double value = abs(x0 + a.at(what_entrynum) * y0 + par[0]) / sqrt(a.at(what_entrynum) * a.at(what_entrynum) + 1);
-
-	return value;
-}
 
 static void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t iflag)
 {
@@ -41,7 +31,8 @@ static void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t if
 
 		chisq += delta * delta;
 
-		// sstd::cout << rvs.at(i) << " " << d0(xvs.at(i), yvs.at(i), par) << " " << xvs.at(i) << " " << yvs.at(i) << " " << par[0] << " " << par[1] << std::endl;
+		//std::cout << "tube is: " << i << " delta is: " << delta << " sigma is: " << sigma << std::endl;
+		//std::cout << "radius is " << rvs.at(i) << " d0 is " << d0(xvs.at(i), yvs.at(i), par) << " x is: " << xvs.at(i) << " y is: " << yvs.at(i) << " par[0] is: " << par[0] << " par[1] is: " << par[1] << std::endl;
 	}
 	// std::cout << "chisq is " << chisq << std::endl;
 	f = chisq;
@@ -66,11 +57,11 @@ LineParts justfitlines(int setfn)
 	// static Double_t vstart[2] = {0, 25};
 	static Double_t vstart[2] = {0, 0};
 	// TODO: TESTING IF STARTING AT 0 0 GETS RID OF THE WEIRD ASS BUMP
-	static Double_t step[2] = {0.001, 0.001};
+	static Double_t step[2] = {0.0001, 0.1};
 	if (setfn == 0)
 	{
-		gMinuit->mnparm(0, "a", vstart[0], step[0], 0, 0, ierflg);
-		gMinuit->mnparm(1, "b", vstart[1], step[1], 0, 0, ierflg);
+		gMinuit->mnparm(0, "a", vstart[0], step[0], -0.4, 0.4, ierflg);
+		gMinuit->mnparm(1, "b", vstart[1], step[1], -10, 50, ierflg);
 	}
 	else
 	{
@@ -80,7 +71,7 @@ LineParts justfitlines(int setfn)
 	// Now ready for minimization step
 	arglist[0] = 1000000;
 	// TODO: CHANGED MINIMIZATION TOLERANCE -- before it was like 1
-	arglist[1] = 0.00001;
+	arglist[1] = 0.001;
 
 	gMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
 
@@ -128,6 +119,8 @@ LineParts justfitlines(int setfn)
 		loine.chisq = chisq;
 	}
 
+
+	//std::cout << "---------------------------------------------------" << std::endl;
 	delete gMinuit;
 
 	return loine;
@@ -285,8 +278,6 @@ vector<LineParts> fit_single_chamber(int chambernumber, int setfn, vector<NewEve
 				}
 			}
 
-			// TODO: HAVE SET IT SO THAT IT ONLY FITS LINES IF THERE ARE MORE THAN OR EQUAL TO TWO POINTS IN THE CHAMBER
-			// if (xvs.size() > 2)
 			wow = justfitlines(setfn);
 		}
 
