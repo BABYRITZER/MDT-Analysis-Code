@@ -1,8 +1,9 @@
 #include "gransac_implementations.h"
 
-void findInliers(vector<NewEvent> &events, NewEvent &processed_event, TBranch *branch_eventnum, TBranch *branch_t, TBranch *branch_chg, TBranch *branch_chmb, TBranch *branch_layer, TBranch *branch_tube, TBranch *branch_is_inliner)
+vector<float> findInliers(vector<NewEvent> &events, NewEvent &processed_event, TBranch *branch_eventnum, TBranch *branch_t, TBranch *branch_chg, TBranch *branch_chmb, TBranch *branch_layer, TBranch *branch_tube, TBranch *branch_is_inliner)
 {
     vector<NewEvent> processed_events;
+    vector<float> gransac_line_params;
 
     for (int i = 0; i < events.size(); i++)
     {
@@ -33,6 +34,29 @@ void findInliers(vector<NewEvent> &events, NewEvent &processed_event, TBranch *b
         gransac.Estimate(points);
 
         auto BestInliers = gransac.GetBestInliers();
+
+        //returns line params in a vector of slope, intercept, slope, intercept, etc
+
+        auto BestLine = gransac.GetBestModel();
+        if (BestLine)
+        {
+            auto BestLinePt1 = std::dynamic_pointer_cast<Point2D>(BestLine->GetModelParams()[0]);
+            auto BestLinePt2 = std::dynamic_pointer_cast<Point2D>(BestLine->GetModelParams()[1]);
+            if (BestLinePt1 && BestLinePt2)
+            {
+                auto x1 = BestLinePt1->m_Point2D[0];
+                auto y1 = BestLinePt1->m_Point2D[1];
+                auto x2 = BestLinePt2->m_Point2D[0];
+                auto y2 = BestLinePt2->m_Point2D[1];
+
+                float slp = (x2 - x1) / (y2 - y1);
+
+                float intercept = x1 - slp * y1;
+
+                gransac_line_params.push_back(slp);
+                gransac_line_params.push_back(intercept);
+            }
+        }
 
         vector<int> goodhitindexes;
 
@@ -76,4 +100,6 @@ void findInliers(vector<NewEvent> &events, NewEvent &processed_event, TBranch *b
         branch_tube->Fill();
         branch_is_inliner->Fill();
     }
+
+    return gransac_line_params;
 }

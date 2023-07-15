@@ -227,6 +227,9 @@ int main(int argc, char **argv)
 
         for (chambNum = 0; chambNum < 3; chambNum++)
         {
+
+            std::cout << "chamber is " << chambNum << std::endl;
+
             for (layerNum = 0; layerNum < 3; layerNum++)
             {
                 for (tubeNum = 0; tubeNum < 16; tubeNum++)
@@ -263,7 +266,7 @@ int main(int argc, char **argv)
                         int tubeloc = std::find(hittubenums.begin(), hittubenums.end(), tubenum) - hittubenums.begin();
                         float tubetime = hittubetimes.at(tubeloc);
 
-                        std::cout << "tube time is " << tubetime << std::endl;
+                        std::cout << "x is: " << x << "    " << "y is : " << y << std::endl;
 
                         float radius = rfns.at(tubeloc)->Eval(tubetime);
 
@@ -309,22 +312,22 @@ int main(int argc, char **argv)
             y = ((float)i * 69.6) / ((float)bins);
             yvalues[i] = y;
 
-            xvaluesc1[i] = (-1. * (a_c1 * y - b_c1));
-            xvaluesc2[i] = (-1. * (a_c2 * y - b_c2));
-            xvaluesc3[i] = (-1. * (a_c3 * y - b_c3));
-            xvaluesc[i] = (-1. * (a * y - b));
+            //xvaluesc1[i] = (a_c1 * y + b_c1));
+            //xvaluesc2[i] = (-1. * (a_c2 * y - b_c2));
+            //xvaluesc3[i] = (-1. * (a_c3 * y - b_c3));
+            xvaluesc[i] = (a * y + b);
         }
 
-        std::cout << "a_c2 - a_c1 = " << a_c1 - a_c2 << std::endl;
-        std::cout << "a_c2 - a_c3 = " << a_c1 - a_c3 << std::endl;
+        //std::cout << "a_c2 - a_c1 = " << a_c1 - a_c2 << std::endl;
+        //std::cout << "a_c2 - a_c3 = " << a_c1 - a_c3 << std::endl;
 
-        std::cout << "c1 fit in green, c2 fit in red, c3 fit in blue and fit over all chambers in cyan." << std::endl;
+        //std::cout << "c1 fit in green, c2 fit in red, c3 fit in blue and fit over all chambers in cyan." << std::endl;
 
-        std::cout << "chisquare for c1 fit is " << c1_chisq << std::endl;
-        std::cout << "chisquare for c2 fit is " << c2_chisq << std::endl;
-        std::cout << "chisquare for c3 fit is " << c3_chisq << std::endl;
+        //std::cout << "chisquare for c1 fit is " << c1_chisq << std::endl;
+        //std::cout << "chisquare for c2 fit is " << c2_chisq << std::endl;
+        //std::cout << "chisquare for c3 fit is " << c3_chisq << std::endl;
         std::cout << "chisquare for all chambers fit is " << chisq << std::endl;
-
+/*
         TGraph *guh0 = new TGraph(bins, xvaluesc1, yvalues);
         guh0->SetLineColor(kGreen);
         guh0->Draw("same");
@@ -336,9 +339,9 @@ int main(int argc, char **argv)
         TGraph *guh2 = new TGraph(bins, xvaluesc3, yvalues);
         guh2->SetLineColor(kBlue);
         guh2->Draw("same");
-
+*/
         TGraph *guh3 = new TGraph(bins, xvaluesc, yvalues);
-        guh3->SetLineColor(kCyan);
+        guh3->SetLineColor(kBlack);
         guh3->Draw("same");
 
         c1->Modified();
@@ -348,9 +351,9 @@ int main(int argc, char **argv)
         std::cout << "" << std::endl;
 
         std::cin.get();
-        c1->GetListOfPrimitives()->Remove(guh0);
-        c1->GetListOfPrimitives()->Remove(guh1);
-        c1->GetListOfPrimitives()->Remove(guh2);
+        //c1->GetListOfPrimitives()->Remove(guh0);
+        //c1->GetListOfPrimitives()->Remove(guh1);
+        //c1->GetListOfPrimitives()->Remove(guh2);
         c1->GetListOfPrimitives()->Remove(guh3);
     }
     app.Run();

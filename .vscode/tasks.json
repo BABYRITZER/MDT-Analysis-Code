@@ -7,7 +7,7 @@
           "command": "bash",
           "args": [
               "-c",
-              "export PATH=~/root/bin:$PATH && g++ -g main.cpp event_dict.cpp fitt0s.cpp radiustimefunction.cpp line_fitting.cpp gransac_implementations.cpp load_from_root_file.cpp -o analysis -I~/root/include `root-config --cflags --libs` -lMinuit -fopenmp"
+              "export PATH=~/root/bin:$PATH && g++ -g event_dict.cpp main.cpp fitt0s.cpp radiustimefunction.cpp line_fitting.cpp gransac_implementations.cpp load_from_root_file.cpp efficiency_calc.cpp -o analysis `root-config --cflags --libs` -lMinuit -fopenmp"
           ],
           "group": "build",
           "presentation": {
