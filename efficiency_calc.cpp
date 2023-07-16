@@ -180,11 +180,28 @@ std::tuple<vector<float>, vector<float>, vector<float>> eff_calc(vector<NewEvent
     return std::make_tuple(tube_eff, tube_eff_pluserr, tube_eff_minuserr);
 }
 
-/*vector<float> layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1> rfuncs)
+std::tuple<vector<int>, vector<int>, vector<int>, vector<int>, vector<int>, vector<int>>
+layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1> rfuncs)
 {
 
-    int bottomnumber = 0;
-    int topnumber;
+    vector<int> bottomnumbers;
+    vector<int> topnumbers;
+
+    vector<int> bottomnumssysplus;
+    vector<int> topnumssysplus;
+
+    vector<int> bottomnumssysminus;
+    vector<int> topnumssysminus;
+
+    for (int i = 0; i < 9; ++i)
+    {
+        bottomnumbers.push_back(0);
+        topnumbers.push_back(0);
+        bottomnumssysplus.push_back(0);
+        topnumssysplus.push_back(0);
+        bottomnumssysminus.push_back(0);
+        topnumssysminus.push_back(0);
+    }
 
     for (int i = 0; i < events.size(); i++)
     {
@@ -216,24 +233,52 @@ std::tuple<vector<float>, vector<float>, vector<float>> eff_calc(vector<NewEvent
         for (int chamb = 0; chamb < 3; chamb++)
             for (int layer = 0; layer < 3; layer++)
             {
-                int layer_to_ignore = layer;
-
+                // ignore the current layer
                 vector<NewEvent> ev;
                 ev.push_back(events.at(i));
-                vector<LineParts> wowowow = fit_chamber(ev, rfuncs, layer_to_ignore);
+                vector<LineParts> wowowow = fit_chamber(ev, rfuncs, layer);
                 LineParts line = wowowow.at(0);
                 ev.clear();
 
-                bottomnumber += 1;
+                if (line.chisq < 50) // check if the line fitted without the layer is actually a decent fit
+                {
 
-                int hitscount = 0;
+                    bottomnumbers.at(layer) += 1;
+                    bottomnumssysplus.at(layer) += 1;
+                    bottomnumssysminus.at(layer) += 1;
 
-                for (int q = 0; q < hittubenums.size(); ++q)
+                    int hitscount = 0;
+                    int hitscountsysplus = 0;
+                    int hitscountsysminus = 0;
+
+                    for (int q = 0; q < hittubenums.size(); ++q)
+                    {
+                        if (hittubenums.at(q) % 9 == layer)
+                        {
+                            vector<float> xy = getTubeCoords(hittubenums.at(q) % 9 % 3, hittubenums.at(q) % 9, hittubenums.at(q) % 16);
+                            pair<float, float> dist_err = dist_calc_with_error(xy.at(0), xy.at(1), line);
+                            // take a 2.5 tube distance
+                            if (dist_err.first < (1.46 * 2.5))
+                                hitscount += 1;
+                            // TODO: does this make sense
+                            if (dist_err.first + dist_err.second < (1.46 * 2.5))
+                                hitscountsysplus += 1;
+                            if (dist_err.first - dist_err.second < (1.46 * 2.5))
+                                hitscountsysminus += 1;
+                        }
+                    }
 
                     if (hitscount > 0)
-                    {
-                        topnumber += 1;
-                    }
+                        topnumbers.at(layer) += 1;
+
+                    if (hitscountsysplus > 0)
+                        topnumssysplus.at(layer) += 1;
+
+                    if (hitscountsysminus > 0)
+                        topnumssysminus.at(layer) += 1;
+                }
             }
     }
-}*/
+
+    return std::make_tuple(topnumbers, bottomnumbers, topnumssysplus, bottomnumssysplus, topnumssysminus, bottomnumssysminus);
+}

@@ -15,6 +15,7 @@
 #include <TLeaf.h>
 #include <TApplication.h>
 #include <TGraph.h>
+#include <TGaxis.h>
 
 #include "fitt0s.h"
 #include "radiustimefunction.h"
@@ -35,6 +36,10 @@ int main(int argc, char **argv)
     std::cin >> name;
 
     string filename = "reco_run" + name + "_analysis.root";
+
+    std::cout << "if you can to plot the fits press y otherwise press something else" << std::endl;
+    string drawgraph;
+    std::cin >> drawgraph;
 
     TFile *f = new TFile((filename.c_str()));
     TTree *tree = (TTree *)f->Get("myTree");
@@ -147,7 +152,7 @@ int main(int argc, char **argv)
 
     std::cout << " guh " << std::endl;
 
-    long int entries = 100000;
+    long int entries = 10000000;
 
     std::cout << entries << std::endl;
 
@@ -175,16 +180,34 @@ int main(int argc, char **argv)
         rfns.push_back(radius_for_time(times.at(0), t0_vals.at(i)));
 
     // start
-    TCanvas *c1 = new TCanvas("c1", "c1", 495 + 4, 696 + 4);
-    c1->Range(0, 0, 49.5 + 4, 69.6 + 4);
+    // TCanvas *c1 = new TCanvas("c1", "c1", 495 + 4, 696 + 4);
+    // c1->Range(0, 0, 49.5 + 4, 69.6 + 4);
+
+    TCanvas *c1 = new TCanvas("c1", "c1", 495 + 5 + 15 + 15, 696 + 5 + 15 + 15);
+    c1->Range(-5 - 1.5, -5 - 1.5, 49.5 + 0.5 + 1.5, 69.6 + 0.5 + 1.5);
+
+    // TGaxis::TGaxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax,
+    // Double_t wmin, Double_t wmax, Int_t ndiv, Option_t * chopt,
+    // Double_t gridlength);
+
+    //    auto axisx = new TGaxis(-1.5, 0, 49.5 + 0.5, 0, -1.5, 49.5 + 0.5, 5, "+", 0.2);
+    auto axisx = new TGaxis(-1.5, 0, 49.5 + 0.5, 0, -1.5, 49.5 + 0.5, 15);
+
+    axisx->SetTitle("X axis");
+    axisx->Draw();
+
+    //    auto axisy = new TGaxis(0, -1.5, 0, 69.6 + 0.5, -1.5, 69.6 + 0.5, 5, "+", 0.2);
+    auto axisy = new TGaxis(0, -1.5, 0, 69.6 + 0.5, -1.5, 69.6 + 0.5, 15);
+    axisy->SetTitle("Y axis");
+    axisy->Draw();
 
     // rotation matrices and horizontal offsets
 
-    double meanc1_angle = 0; //atan(-0.08);
-    double meanc3_angle = 0; //atan(-0.01);
+    double meanc1_angle = 0; // atan(-0.08);
+    double meanc3_angle = 0; // atan(-0.01);
 
     double meanc1_b_diffs = 0; //-0.504;
-    double meanc3_b_diffs = 0; //1.01;
+    double meanc3_b_diffs = 0; // 1.01;
 
     double rotationmatc3[2][2] = {{cos(meanc3_angle), -sin(meanc3_angle)}, {sin(meanc3_angle), cos(meanc3_angle)}};
     double rotationmatc1[2][2] = {{cos(meanc1_angle), -sin(meanc1_angle)}, {sin(meanc1_angle), cos(meanc1_angle)}};
@@ -266,7 +289,8 @@ int main(int argc, char **argv)
                         int tubeloc = std::find(hittubenums.begin(), hittubenums.end(), tubenum) - hittubenums.begin();
                         float tubetime = hittubetimes.at(tubeloc);
 
-                        std::cout << "x is: " << x << "    " << "y is : " << y << std::endl;
+                        std::cout << "x is: " << x << "    "
+                                  << "y is : " << y << std::endl;
 
                         float radius = rfns.at(tubeloc)->Eval(tubetime);
 
@@ -312,38 +336,41 @@ int main(int argc, char **argv)
             y = ((float)i * 69.6) / ((float)bins);
             yvalues[i] = y;
 
-            //xvaluesc1[i] = (a_c1 * y + b_c1));
-            //xvaluesc2[i] = (-1. * (a_c2 * y - b_c2));
-            //xvaluesc3[i] = (-1. * (a_c3 * y - b_c3));
+            // xvaluesc1[i] = (a_c1 * y + b_c1));
+            // xvaluesc2[i] = (-1. * (a_c2 * y - b_c2));
+            // xvaluesc3[i] = (-1. * (a_c3 * y - b_c3));
             xvaluesc[i] = (a * y + b);
         }
 
-        //std::cout << "a_c2 - a_c1 = " << a_c1 - a_c2 << std::endl;
-        //std::cout << "a_c2 - a_c3 = " << a_c1 - a_c3 << std::endl;
+        // std::cout << "a_c2 - a_c1 = " << a_c1 - a_c2 << std::endl;
+        // std::cout << "a_c2 - a_c3 = " << a_c1 - a_c3 << std::endl;
 
-        //std::cout << "c1 fit in green, c2 fit in red, c3 fit in blue and fit over all chambers in cyan." << std::endl;
+        // std::cout << "c1 fit in green, c2 fit in red, c3 fit in blue and fit over all chambers in cyan." << std::endl;
 
-        //std::cout << "chisquare for c1 fit is " << c1_chisq << std::endl;
-        //std::cout << "chisquare for c2 fit is " << c2_chisq << std::endl;
-        //std::cout << "chisquare for c3 fit is " << c3_chisq << std::endl;
+        // std::cout << "chisquare for c1 fit is " << c1_chisq << std::endl;
+        // std::cout << "chisquare for c2 fit is " << c2_chisq << std::endl;
+        // std::cout << "chisquare for c3 fit is " << c3_chisq << std::endl;
         std::cout << "chisquare for all chambers fit is " << chisq << std::endl;
-/*
-        TGraph *guh0 = new TGraph(bins, xvaluesc1, yvalues);
-        guh0->SetLineColor(kGreen);
-        guh0->Draw("same");
+        /*
+                TGraph *guh0 = new TGraph(bins, xvaluesc1, yvalues);
+                guh0->SetLineColor(kGreen);
+                guh0->Draw("same");
 
-        TGraph *guh1 = new TGraph(bins, xvaluesc2, yvalues);
-        guh1->SetLineColor(kRed);
-        guh1->Draw("same");
+                TGraph *guh1 = new TGraph(bins, xvaluesc2, yvalues);
+                guh1->SetLineColor(kRed);
+                guh1->Draw("same");
 
-        TGraph *guh2 = new TGraph(bins, xvaluesc3, yvalues);
-        guh2->SetLineColor(kBlue);
-        guh2->Draw("same");
-*/
+                TGraph *guh2 = new TGraph(bins, xvaluesc3, yvalues);
+                guh2->SetLineColor(kBlue);
+                guh2->Draw("same");
+        */
         TGraph *guh3 = new TGraph(bins, xvaluesc, yvalues);
-        guh3->SetLineColor(kBlack);
-        guh3->Draw("same");
 
+        if (drawgraph == "y")
+        {
+            guh3->SetLineColor(kBlack);
+            guh3->Draw("same");
+        }
         c1->Modified();
         c1->Modified();
         c1->Update();
@@ -351,10 +378,31 @@ int main(int argc, char **argv)
         std::cout << "" << std::endl;
 
         std::cin.get();
-        //c1->GetListOfPrimitives()->Remove(guh0);
-        //c1->GetListOfPrimitives()->Remove(guh1);
-        //c1->GetListOfPrimitives()->Remove(guh2);
-        c1->GetListOfPrimitives()->Remove(guh3);
+
+        string wow;
+
+        string pictitle = "run_" + name + "_event_" + std::to_string(entry) + "_" + drawgraph + ".png";
+
+        std::cin >> wow;
+
+        if (wow == "f")
+            c1->GetListOfPrimitives()->Remove(guh3);
+
+        else if (wow == "b")
+        {
+            entry = entry - 2;
+            c1->GetListOfPrimitives()->Remove(guh3);
+        }
+
+        else if (wow == "s")
+        {
+            c1->SaveAs("pictitle");
+            c1->GetListOfPrimitives()->Remove(guh3);
+        }
+
+        // c1->GetListOfPrimitives()->Remove(guh0);
+        // c1->GetListOfPrimitives()->Remove(guh1);
+        // c1->GetListOfPrimitives()->Remove(guh2);
     }
     app.Run();
 

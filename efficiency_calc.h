@@ -10,7 +10,5 @@ std::tuple<vector<float>, vector<float>, vector<float>> eff_calc(vector<NewEvent
 // Returns the distance from a point to a line and the error in that distance (in that order)
 std::pair<float, float> dist_calc_with_error(float x, float y, LineParts line);
 
-/*
-d = abs(line.a * xy.at(1) + line.b - xy.at(0)) / sqrt(line.a * line.a + 1)
-delta_d
-*/
+std::tuple<vector<int>, vector<int>, vector<int>, vector<int>, vector<int>, vector<int>>
+layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1> rfuncs);
