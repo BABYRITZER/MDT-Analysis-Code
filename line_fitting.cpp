@@ -196,6 +196,7 @@ LineParts justfitlines(int setfn, int event, vector<float> gransac_lineparams)
 	return loine;
 }
 
+// Gets the coordinates of the tube based on the chamber, layer, and tube number. Chamber = 0, 1, 2. Layer = 0, 1, 2 Tube = 0-15.
 vector<float> getTubeCoords(int chamber, int layer, int tube)
 {
 	vector<float> coord;

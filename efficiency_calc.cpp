@@ -184,6 +184,8 @@ std::tuple<vector<int>, vector<int>, vector<int>, vector<int>, vector<int>, vect
 layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1> rfuncs)
 {
 
+    float tubes_away_from_line_considered = 3.0f; // Important, this is the number of tubes away from the line that we consider to be on the path.
+
     vector<int> bottomnumbers;
     vector<int> topnumbers;
 
@@ -236,16 +238,19 @@ layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1
                 // ignore the current layer
                 vector<NewEvent> ev;
                 ev.push_back(events.at(i));
-                vector<LineParts> wowowow = fit_chamber(ev, rfuncs, layer);
+
+                int layernumber = 3 * chamb + layer; // Aka the overall layer number (0-8) not the one relative to the chamber (0-2)
+                vector<LineParts> wowowow = fit_chamber(ev, rfuncs, layernumber);
+
                 LineParts line = wowowow.at(0);
                 ev.clear();
 
                 if (line.chisq < 50) // check if the line fitted without the layer is actually a decent fit
                 {
 
-                    bottomnumbers.at(layer) += 1;
-                    bottomnumssysplus.at(layer) += 1;
-                    bottomnumssysminus.at(layer) += 1;
+                    bottomnumbers.at(layernumber) += 1;
+                    bottomnumssysplus.at(layernumber) += 1;
+                    bottomnumssysminus.at(layernumber) += 1;
 
                     int hitscount = 0;
                     int hitscountsysplus = 0;
@@ -253,31 +258,51 @@ layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1
 
                     for (int q = 0; q < hittubenums.size(); ++q)
                     {
-                        if (hittubenums.at(q) % 9 == layer)
+                        // check if the hit tubes are in the layer and then cehck if the line passes near the line
+
+
+                        if (hittubenums.at(q) /16 == layernumber) //TODO: This was == layer before, should be == 3 * chamb + layer
                         {
-                            vector<float> xy = getTubeCoords(hittubenums.at(q) % 9 % 3, hittubenums.at(q) % 9, hittubenums.at(q) % 16);
+                            int chamber = hittubenums.at(q) / 48;
+                            int layer_rel_to_chamber = (hittubenums.at(q) /16) % 3; 
+                            int tube_rel_to_layer = hittubenums.at(q) % 16;
+
+                            
+                            vector<float> xy = getTubeCoords(chamber, layer_rel_to_chamber, tube_rel_to_layer);
                             pair<float, float> dist_err = dist_calc_with_error(xy.at(0), xy.at(1), line);
-                            // take a 2.5 tube distance
-                            if (dist_err.first < (1.46 * 2.5))
+
+                            if (layernumber == 1 || layernumber == 2)
+                                std::cout << "We are in layer " << layernumber << " dist: " << dist_err.first << " err: " << dist_err.second << std::endl;
+
+
+                            // take a tubes_away_from_line_considered tube distance
+                            if (dist_err.first < (1.46 * tubes_away_from_line_considered))
                                 hitscount += 1;
                             // TODO: does this make sense
-                            if (dist_err.first + dist_err.second < (1.46 * 2.5))
+                            if (dist_err.first + dist_err.second < (1.46 * tubes_away_from_line_considered))
                                 hitscountsysplus += 1;
-                            if (dist_err.first - dist_err.second < (1.46 * 2.5))
+                            if (dist_err.first - dist_err.second < (1.46 * tubes_away_from_line_considered))
                                 hitscountsysminus += 1;
                         }
                     }
 
                     if (hitscount > 0)
-                        topnumbers.at(layer) += 1;
+                        topnumbers.at(layernumber) += 1;
 
                     if (hitscountsysplus > 0)
-                        topnumssysplus.at(layer) += 1;
+                        topnumssysplus.at(layernumber) += 1;
 
                     if (hitscountsysminus > 0)
-                        topnumssysminus.at(layer) += 1;
+                        topnumssysminus.at(layernumber) += 1;
                 }
             }
+    }
+    
+    //TODO: Remove this, this is for debugging
+    for(int i = 0; i < topnumbers.size(); ++i)
+    {
+        std::cout << "Layer " << i << " top: " << topnumbers.at(i) << " bottom: " << bottomnumbers.at(i) << std::endl;
+        std::cout << "Division: " << (float)topnumbers.at(i) / (float)bottomnumbers.at(i) << std::endl;
     }
 
     return std::make_tuple(topnumbers, bottomnumbers, topnumssysplus, bottomnumssysplus, topnumssysminus, bottomnumssysminus);
