@@ -46,7 +46,7 @@ static double d0(float x0, float y0, double *par, int chamber)
 
 	// c1 shift is par[2]
 	// c3 shift is par[3]
-	
+
 	value = abs(par[1] + par[0] * y0 - x0) / sqrt(par[0] * par[0] + 1.);
 
 	return value;
@@ -75,7 +75,7 @@ static void fcn(Int_t &npar, Double_t *gin, Double_t &f, Double_t *par, Int_t if
 		// std::cout << "radius is " << rvs.at(i) << " d0 is " << d0(xvs.at(i), yvs.at(i), par) << " x is: " << xvs.at(i) << " y is: " << yvs.at(i) << " par[0] is: " << par[0] << " par[1] is: " << par[1] << std::endl;
 	}
 	// std::cout << "chisq is " << chisq << std::endl;
-	f = chisq;
+	f = (1. / ((double)xvs.size() - 2.)) * chisq;
 }
 
 LineParts justfitlines(int setfn, int event, vector<float> gransac_lineparams)
@@ -120,8 +120,8 @@ LineParts justfitlines(int setfn, int event, vector<float> gransac_lineparams)
 	gMinuit->mnparm(0, "a", vstart[0], step[0], -0.5, 0.5, ierflg);
 	gMinuit->mnparm(1, "b", vstart[1], step[1], -10, 50, ierflg);
 
-	//gMinuit->mnparm(2, "ch1loc", 0., step[1], -5., 5., ierflg);
-	//gMinuit->mnparm(3, "ch3loc", 0., step[1], -5., 5., ierflg);
+	// gMinuit->mnparm(2, "ch1loc", 0., step[1], -5., 5., ierflg);
+	// gMinuit->mnparm(3, "ch3loc", 0., step[1], -5., 5., ierflg);
 
 	// Now ready for minimization step
 	arglist[0] = 1000000;
@@ -152,22 +152,22 @@ LineParts justfitlines(int setfn, int event, vector<float> gransac_lineparams)
 		gMinuit->GetParameter(0, a, erra);
 		gMinuit->GetParameter(1, b, errb);
 
-		//gMinuit->GetParameter(2, ch1, errch1);
-		//gMinuit->GetParameter(3, ch3, errch3);
+		// gMinuit->GetParameter(2, ch1, errch1);
+		// gMinuit->GetParameter(3, ch3, errch3);
 
 		chisq = gMinuit->fAmin;
 
 		loine.a = a;
 		loine.b = b;
 
-		//loine.ch1 = ch1;
-		//loine.ch3 = errch3;
+		// loine.ch1 = ch1;
+		// loine.ch3 = errch3;
 
 		loine.aerr = erra;
 		loine.berr = errb;
 
-		//loine.ch1err = errch1;
-		//loine.ch3err = errch3;
+		// loine.ch1err = errch1;
+		// loine.ch3err = errch3;
 
 		loine.chisq = chisq;
 	}
@@ -314,7 +314,7 @@ vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, int l
 
 			if (events.at(i).is_inlier.at(j) == 1)
 			{
-				int layernum = events.at(i).layer.at(j)  + events.at(i).chamber.at(j) * 3; //We need to get the absolute layer number 0-8 instead of relative to the chamber 0-2
+				int layernum = events.at(i).layer.at(j) + events.at(i).chamber.at(j) * 3; // We need to get the absolute layer number 0-8 instead of relative to the chamber 0-2
 
 				if (layernum == layer_to_ignore) // Important: ignore the specified layer number
 					continue;
@@ -341,7 +341,7 @@ vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, int l
 
 				xvs.push_back(xy.at(0));
 				yvs.push_back(xy.at(1));
-//TODO:
+				// TODO:
 				rvs.push_back(rfuncs.at(tubenum).Eval(time - extern_t0s.at(tubenum)));
 				sigmas.push_back(rfuncs.at(tubenum).Derivative(time - extern_t0s.at(tubenum)) * 25. / sqrt(12.));
 				chlist.push_back(events.at(i).chamber.at(j));

@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 
     string filename = "reco_run" + name + "_analysis.root";
 
-    std::cout << "if you can to plot the fits press y otherwise press something else" << std::endl;
+    std::cout << "if you want to plot the fits press y otherwise press something else" << std::endl;
     string drawgraph;
     std::cin >> drawgraph;
 
@@ -196,12 +196,12 @@ int main(int argc, char **argv)
     //    auto axisx = new TGaxis(-1.5, 0, 49.5 + 0.5, 0, -1.5, 49.5 + 0.5, 5, "+", 0.2);
     auto axisx = new TGaxis(-1.5, 0, 49.5 + 0.5, 0, -1.5, 49.5 + 0.5, 15);
 
-    axisx->SetTitle("X axis");
+    axisx->SetTitle("X axis (cm)");
     axisx->Draw();
 
     //    auto axisy = new TGaxis(0, -1.5, 0, 69.6 + 0.5, -1.5, 69.6 + 0.5, 5, "+", 0.2);
     auto axisy = new TGaxis(0, -1.5, 0, 69.6 + 0.5, -1.5, 69.6 + 0.5, 15);
-    axisy->SetTitle("Y axis");
+    axisy->SetTitle("Y axis (cm)");
     axisy->Draw();
 
     // rotation matrices and horizontal offsets
