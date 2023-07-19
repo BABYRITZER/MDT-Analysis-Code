@@ -23,15 +23,14 @@ typedef struct
 
 } Efficiency;
 
-vector<string> analysisfiles = {"reco_run988_analysis.root",
+/*vector<string> analysisfiles = {"reco_run988_analysis.root",
                                 "reco_run525_analysis.root",
                                 "reco_run526_analysis.root",
                                 "reco_run527_analysis.root",
                                 "reco_run528_analysis.root",
-                                //"reco_run529_analysis.root",
                                 "reco_run2850_analysis.root",
                                 "reco_run2800_analysis.root",
-                                "reco_run522_analysis.root"};
+                                "reco_run522_analysis.root"};*/
 /*"reco_run522_analysis.root",
  "reco_run525_analysis.root",
  "reco_run526_analysis.root",
@@ -40,7 +39,19 @@ vector<string> analysisfiles = {"reco_run988_analysis.root",
  "reco_run529_analysis.root",
  "reco_run2850_analysis.root"};*/
 
- //vector<string> analysisfiles = {"reco_run525_analysis.root"};
+ //c2 voltage   |988  525  526  527  528  2850 2800 522
+ // run         |3100 3050 3000 2950 2900 2850 2800 3100
+
+ // -> 522 525 526 527 528 2850 2800
+
+vector<string> analysisfiles = {"reco_run522_analysis.root",
+                                "reco_run525_analysis.root",
+                                "reco_run526_analysis.root",
+                                "reco_run527_analysis.root",
+                                "reco_run528_analysis.root",
+                                "reco_run2850_analysis.root",
+                                "reco_run2800_analysis.root"};
+
 
 // Declaration of leaf types
 Double_t t0s;

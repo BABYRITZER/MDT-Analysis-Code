@@ -356,7 +356,7 @@ std::tuple<vector<float>, vector<int>, vector<int>> layer_effcalc2(vector<NewEve
         if (fittedlines.at(i).chisq > (50. / (9. - 2)))
             continue;
 
-        // 2. Check if there are enough hits
+       // 2. Check if there are enough hits
         if (events.at(i).t.size() < 6)
             continue;
 
@@ -376,6 +376,10 @@ std::tuple<vector<float>, vector<int>, vector<int>> layer_effcalc2(vector<NewEve
                 hittubenums.push_back(realtubenum);
             }
         }
+
+        // 3.5 Check if there are too many hits
+        if (hittubenums.size() > 13)
+            continue;
 
         for (int layer = 0; layer < 9; ++layer)
         {
