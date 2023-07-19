@@ -384,7 +384,7 @@ int main(int argc, char **argv)
 
         string wow;
 
-        string pictitle = output_directory + "run_" + name + "_event_" + std::to_string(entry) + "_" + drawgraph + ".png";
+        string pictitle = output_directory + "run_" + name + "_event_" + std::to_string(entry) + "_" + drawgraph + "_chisq" + std::to_string(chisq) +".png";
 
         std::cout << "press f to go to next event, b to go to previous event, s to save as " << pictitle << std::endl;
 

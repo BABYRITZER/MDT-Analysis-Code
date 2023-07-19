@@ -67,3 +67,10 @@ reco_run3100.root
 reco_run3100.root:Zone.Identifier
 efficiencies_layers.pdf
 effgraphs
+chambers.cpp
+drawn_chambers/run_988_event_5_y_chisq19.994839.png
+drawn_chambers/run_988_event_11_y_chisq6.326251.png
+drawn_chambers/run_988_event_19_u_chisq16405.632710.png
+drawn_chambers/run_988_event_21_y_chisq9.497216.png
+drawn_chambers/run_988_event_22_y_chisq9.607053.png
+drawn_chambers/run_988_event_33_y_chisq7.963303.png
