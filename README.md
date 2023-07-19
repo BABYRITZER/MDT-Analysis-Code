@@ -11,7 +11,7 @@ libs` -lMinuit -fopenmp ``
 
 ## To build the efficiency graph maker run the command:
 
-`` g++ eff_graphs.cpp -o effgraphs `root-config --cflags --libs` ``
+`` g++ effgrafs.cpp -o effgraphs `root-config --cflags --libs` ``
 
 ## The RANSAC implementation was taken from:
 https://github.com/drsrinathsridhar/GRANSAC/. 

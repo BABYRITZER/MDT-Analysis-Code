@@ -67,7 +67,8 @@ std::tuple<vector<float>, vector<float>, vector<float>> eff_calc(vector<NewEvent
     {
 
         // FOR EFFICIENCY CUTTING CHISQUARE AT 50 -- using 0.1 resolution
-        if (fittedlines.at(i).chisq > 50)
+        // now its reduced chi square so use 50 / (9-2)
+        if (fittedlines.at(i).chisq > (50. / (9. - 2)))
             continue;
 
         // TODO:
@@ -237,7 +238,7 @@ layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1
     {
 
         // FOR EFFICIENCY CUTTING CHISQUARE AT 50 -- using 0.1 resolution
-        if (fittedlines.at(i).chisq > 50)
+        if (fittedlines.at(i).chisq > (50. / (9. - 2)))
             continue;
 
         // here since we need at least 5 hits in the line, we require now that we need 6 -- so that the line still fits with 5 points
@@ -274,7 +275,7 @@ layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1
                 std::cout << "Line: " << line.a << " " << line.b << " " << line.chisq << std::endl;
                 ev.clear();
 
-                if (line.chisq < 50) // check if the line fitted without the layer is actually a decent fit
+                if (line.chisq < (50. / (9. - 2))) // check if the line fitted without the layer is actually a decent fit
                 {
 
                     bottomnumbers.at(layernumber) += 1;
@@ -352,7 +353,7 @@ std::tuple<vector<float>, vector<int>, vector<int>> layer_effcalc2(vector<NewEve
     for (int i = 0; i < events.size(); ++i)
     {
         // 1. Check if the line is a good fit
-        if (fittedlines.at(i).chisq > 30)
+        if (fittedlines.at(i).chisq > (50. / (9. - 2)))
             continue;
 
         // 2. Check if there are enough hits
@@ -387,15 +388,15 @@ std::tuple<vector<float>, vector<int>, vector<int>> layer_effcalc2(vector<NewEve
             ev.clear();
 
             // 5. Check if the line is a good fit, if so increment denominator
-            if (line.chisq > 50 || line.chisq == 0)
+            if (line.chisq > (50. / (9. - 2)) || line.chisq == 0)
                 continue;
 
-            //std::cout << "Line: " << line.a << " " << line.b << " " << line.chisq << std::endl;
+            // std::cout << "Line: " << line.a << " " << line.b << " " << line.chisq << std::endl;
 
-            denominators.at(layer) +=1;
+            denominators.at(layer) += 1;
 
             // 6. Check if the line is close enough to a hit in the layer
-            //int hitscount = 0;
+            // int hitscount = 0;
 
             for (int hit = 0; hit < hittubenums.size(); ++hit)
             {
@@ -416,8 +417,8 @@ std::tuple<vector<float>, vector<int>, vector<int>> layer_effcalc2(vector<NewEve
                     // 6.2. Check if the line is close enough to the hit
                     if (dist_err.first < acceptable_distance_from_line)
                     {
-                        //std::cout << "Hit is close enough to line!" << std::endl;
-                        numerators.at(layer) +=1;
+                        // std::cout << "Hit is close enough to line!" << std::endl;
+                        numerators.at(layer) += 1;
                         break;
                     }
                 }
