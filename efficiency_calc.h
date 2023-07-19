@@ -12,3 +12,5 @@ std::pair<float, float> dist_calc_with_error(float x, float y, LineParts line);
 
 std::tuple<vector<int>, vector<int>, vector<int>, vector<int>, vector<int>, vector<int>>
 layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1> rfuncs);
+
+std::tuple<vector<float>, vector<int>, vector<int>> layer_effcalc2(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1> rfuncs);

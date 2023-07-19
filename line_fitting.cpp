@@ -314,7 +314,7 @@ vector<LineParts> fit_chamber(vector<NewEvent> events, vector<TF1> rfuncs, int l
 
 			if (events.at(i).is_inlier.at(j) == 1)
 			{
-				int layernum = events.at(i).layer.at(j);
+				int layernum = events.at(i).layer.at(j)  + events.at(i).chamber.at(j) * 3; //We need to get the absolute layer number 0-8 instead of relative to the chamber 0-2
 
 				if (layernum == layer_to_ignore) // Important: ignore the specified layer number
 					continue;

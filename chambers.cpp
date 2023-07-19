@@ -27,6 +27,9 @@ using std::vector;
 
 int main(int argc, char **argv)
 {
+    system("mkdir -p ./drawn_chambers/"); // make directory if it doesn't exist for saving plots
+    string output_directory = "./drawn_chambers/";
+
     TApplication app("Root app", &argc, argv);
 
     std::cout << " guh " << std::endl;
@@ -381,9 +384,16 @@ int main(int argc, char **argv)
 
         string wow;
 
-        string pictitle = "run_" + name + "_event_" + std::to_string(entry) + "_" + drawgraph + ".png";
+        string pictitle = output_directory + "run_" + name + "_event_" + std::to_string(entry) + "_" + drawgraph + ".png";
+
+        std::cout << "press f to go to next event, b to go to previous event, s to save as " << pictitle << std::endl;
 
         std::cin >> wow;
+
+        while(wow != "f" && wow != "b" && wow != "s") {
+            std::cout << "Error, please enter f, b or s instead of " << wow << std::endl;
+            std::cin >> wow;
+        }
 
         if (wow == "f")
             c1->GetListOfPrimitives()->Remove(guh3);
@@ -396,7 +406,10 @@ int main(int argc, char **argv)
 
         else if (wow == "s")
         {
-            c1->SaveAs("pictitle");
+            
+    
+
+            c1->SaveAs(pictitle.c_str());
             c1->GetListOfPrimitives()->Remove(guh3);
         }
 

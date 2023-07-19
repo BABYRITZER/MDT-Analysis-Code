@@ -20,6 +20,7 @@ public:
     std::vector<Float_t> t;
     std::vector<Float_t> charge;
     std::vector<Int_t> chamber;
+    //Relative to the chamber
     std::vector<Int_t> layer;
     std::vector<Int_t> tube;
     std::vector<Int_t> is_inlier;

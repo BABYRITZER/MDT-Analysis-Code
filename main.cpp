@@ -685,37 +685,40 @@ int main()
 		branch_eff_sys_minus->Fill();
 	}
 
-	auto layereffs = layer_effcalc(events, fittedlines, rfuncs);
+	// 3. layer efficiencies
+
+	//auto layereffs = layer_effcalc(events, fittedlines, rfuncs); //old
+	auto layereffs = layer_effcalc2(events, fittedlines, rfuncs);
 
 	float layereff_top;
 	float layereff_bot;
 
-	float layereff_top_sysplus;
+	// float layereff_top_sysplus;
 
-	float layereff_top_sysminus;
+	// float layereff_top_sysminus;
 
 	TBranch *branch_layereff_top = tree1->Branch("layer_eff_top", &layereff_top);
 	TBranch *branch_layereff_bot = tree1->Branch("layer_eff_bot", &layereff_bot);
 
 	// systematic error comes from the MIGRAD error in the fit parameters
-	TBranch *branch_layereff_top_sys_plus = tree1->Branch("layer_eff_top_sys_plus", &layereff_top_sysplus);
-	TBranch *branch_layereff_top_sys_minus = tree1->Branch("layer_eff_top_sys_minus", &layereff_top_sysminus);
+	// TBranch *branch_layereff_top_sys_plus = tree1->Branch("layer_eff_top_sys_plus", &layereff_top_sysplus);
+	// TBranch *branch_layereff_top_sys_minus = tree1->Branch("layer_eff_top_sys_minus", &layereff_top_sysminus);
 
 	for (int w = 0; w < 9; ++w)
 	{
 		//    return std::make_tuple(topnumbers, bottomnumbers, topnumssysplus, bottomnumssysplus, topnumssysminus, bottomnumssysminus);
 		// 0 1 2 4
-		layereff_top = get<0>(layereffs).at(w);
-		layereff_bot = get<1>(layereffs).at(w);
+		layereff_top = get<1>(layereffs).at(w);
+		layereff_bot = get<2>(layereffs).at(w);
 
-		layereff_top_sysplus = get<2>(layereffs).at(w);
-		layereff_top_sysminus = get<4>(layereffs).at(w);
+		// layereff_top_sysplus = get<2>(layereffs).at(w);
+		// layereff_top_sysminus = get<4>(layereffs).at(w);
 
 		branch_layereff_top->Fill();
 		branch_layereff_bot->Fill();
 
-		branch_layereff_top_sys_plus->Fill();
-		branch_layereff_top_sys_minus->Fill();
+		// branch_layereff_top_sys_plus->Fill();
+		// branch_layereff_top_sys_minus->Fill();
 	}
 
 	tree1->SetEntries(events.size());

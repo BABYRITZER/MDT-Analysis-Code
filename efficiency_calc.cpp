@@ -32,6 +32,8 @@ std::tuple<vector<float>, vector<float>, vector<float>> eff_calc(vector<NewEvent
                                                                  TBranch *topbranch, TBranch *botbranch, int &efftop, int &effbot)
 {
 
+    float distance_from_line = 1.46f; // Important, this is the distance from the line that we consider to be on the path. 1.46 is the radius of the tube
+
     vector<int> dist_lessthan_counter;
     vector<int> tube_hit_counter;
 
@@ -91,7 +93,7 @@ std::tuple<vector<float>, vector<float>, vector<float>> eff_calc(vector<NewEvent
         for (int chamb = 0; chamb < 3; chamb++)
             for (int layer = 0; layer < 3; layer++)
             {
-                int layer_to_ignore = layer;
+                int layer_to_ignore = 3 * chamb + layer;
 
                 vector<NewEvent> ev;
                 ev.push_back(events.at(i));
@@ -129,7 +131,7 @@ std::tuple<vector<float>, vector<float>, vector<float>> eff_calc(vector<NewEvent
                     float d_line_tube = dist_err.first;
                     float d_line_tube_err = dist_err.second;
 
-                    if (d_line_tube < 1.46)
+                    if (d_line_tube < distance_from_line)
                     {
                         dist_lessthan_counter.at(tubenum) += 1;
 
@@ -138,7 +140,7 @@ std::tuple<vector<float>, vector<float>, vector<float>> eff_calc(vector<NewEvent
                     }
 
                     // Error stuff
-                    if (abs(d_line_tube + d_line_tube_err) < 1.46)
+                    if (abs(d_line_tube + d_line_tube_err) < distance_from_line)
                     {
                         dist_lessthan_counter_pluserr.at(tubenum) += 1;
 
@@ -146,7 +148,7 @@ std::tuple<vector<float>, vector<float>, vector<float>> eff_calc(vector<NewEvent
                             tube_hit_counter_pluserr.at(tubenum) += 1;
                     }
 
-                    if (abs(d_line_tube - d_line_tube_err) < 1.46)
+                    if (abs(d_line_tube - d_line_tube_err) < distance_from_line)
                     {
                         dist_lessthan_counter_minuserr.at(tubenum) += 1;
 
@@ -177,6 +179,32 @@ std::tuple<vector<float>, vector<float>, vector<float>> eff_calc(vector<NewEvent
         tube_eff_minuserr.push_back((float)tube_hit_counter_minuserr.at(i) / (float)dist_lessthan_counter_minuserr.at(i));
     }
 
+    // TODO: Remove Print tube efficiencies per layer:
+    //  vector<float> layer_effs;
+
+    // for(int i = 0; i < 9; i++)
+    //     layer_effs.push_back(0.);
+
+    // for(int i = 0; i < 144; i++) {
+    //     int layer = i / 16;
+
+    //     layer_effs.at(layer) += tube_eff.at(i);
+    // }
+
+    // for(int i = 0; i < 9; i++) {
+    //     std::cout << "Layer " << i << ":" << std::endl;
+    //     for(int j = 0; j < 16; j++)
+    //         std::cout << "\tTube " << i * 16 + j << " eff: " << tube_eff.at(i * 16 + j) << std::endl;
+    // }
+
+    // for (int i = 0; i < 9; i++)
+    //     layer_effs.at(i) /= 16.;
+
+    // for(int i = 0; i < 9; i++)
+    //     std::cout << "Layer " << i << " eff: " << layer_effs.at(i) << std::endl;
+
+    // TODO: End of remove
+
     return std::make_tuple(tube_eff, tube_eff_pluserr, tube_eff_minuserr);
 }
 
@@ -184,7 +212,7 @@ std::tuple<vector<int>, vector<int>, vector<int>, vector<int>, vector<int>, vect
 layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1> rfuncs)
 {
 
-    float tubes_away_from_line_considered = 3.0f; // Important, this is the number of tubes away from the line that we consider to be on the path.
+    float tubes_away_from_line_considered = 32.0f; // Important, this is the number of tube radii away from the line that we consider to be on the path.
 
     vector<int> bottomnumbers;
     vector<int> topnumbers;
@@ -243,6 +271,7 @@ layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1
                 vector<LineParts> wowowow = fit_chamber(ev, rfuncs, layernumber);
 
                 LineParts line = wowowow.at(0);
+                std::cout << "Line: " << line.a << " " << line.b << " " << line.chisq << std::endl;
                 ev.clear();
 
                 if (line.chisq < 50) // check if the line fitted without the layer is actually a decent fit
@@ -258,22 +287,20 @@ layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1
 
                     for (int q = 0; q < hittubenums.size(); ++q)
                     {
-                        // check if the hit tubes are in the layer and then cehck if the line passes near the line
+                        // check if the hit tubes are in the layer and then check if the line passes near the line
 
-
-                        if (hittubenums.at(q) /16 == layernumber) //TODO: This was == layer before, should be == 3 * chamb + layer
+                        if (hittubenums.at(q) / 16 == layernumber) // TODO: This was == layer before, should be == 3 * chamb + layer
                         {
                             int chamber = hittubenums.at(q) / 48;
-                            int layer_rel_to_chamber = (hittubenums.at(q) /16) % 3; 
+                            int layer_rel_to_chamber = (hittubenums.at(q) / 16) % 3;
                             int tube_rel_to_layer = hittubenums.at(q) % 16;
 
-                            
                             vector<float> xy = getTubeCoords(chamber, layer_rel_to_chamber, tube_rel_to_layer);
                             pair<float, float> dist_err = dist_calc_with_error(xy.at(0), xy.at(1), line);
+                            std::cout << "Tube: " << hittubenums.at(q) << " at (x,y) (" << xy.at(0) << " " << xy.at(1) << ") with distance to line " << dist_err.first << " error: " << dist_err.second << std::endl;
 
-                            if (layernumber == 1 || layernumber == 2)
+                            if (dist_err.first > tubes_away_from_line_considered * 1.46)
                                 std::cout << "We are in layer " << layernumber << " dist: " << dist_err.first << " err: " << dist_err.second << std::endl;
-
 
                             // take a tubes_away_from_line_considered tube distance
                             if (dist_err.first < (1.46 * tubes_away_from_line_considered))
@@ -297,13 +324,118 @@ layer_effcalc(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1
                 }
             }
     }
-    
-    //TODO: Remove this, this is for debugging
-    for(int i = 0; i < topnumbers.size(); ++i)
+
+    // TODO: Remove this, this is for debugging
+    for (int i = 0; i < topnumbers.size(); ++i)
     {
         std::cout << "Layer " << i << " top: " << topnumbers.at(i) << " bottom: " << bottomnumbers.at(i) << std::endl;
         std::cout << "Division: " << (float)topnumbers.at(i) / (float)bottomnumbers.at(i) << std::endl;
     }
 
     return std::make_tuple(topnumbers, bottomnumbers, topnumssysplus, bottomnumssysplus, topnumssysminus, bottomnumssysminus);
+}
+
+// Calculates efficiencies per layer (2nd attempt). Returns vector of efficiencies per layer. Returns efficiencies, numerators, denominators for each layer.
+std::tuple<vector<float>, vector<int>, vector<int>> layer_effcalc2(vector<NewEvent> events, vector<LineParts> fittedlines, vector<TF1> rfuncs)
+{
+    float acceptable_distance_from_line = 1.46f * 6; // Important, this is the distance from the line that we consider to be on the path. 1.46 is the radius of the tube
+
+    vector<int> numerators;
+    vector<int> denominators;
+
+    for (int q = 0; q < 9; q++)
+    {
+        numerators.push_back(0);
+        denominators.push_back(0);
+    }
+
+    for (int i = 0; i < events.size(); ++i)
+    {
+        // 1. Check if the line is a good fit
+        if (fittedlines.at(i).chisq > 30)
+            continue;
+
+        // 2. Check if there are enough hits
+        if (events.at(i).t.size() < 6)
+            continue;
+
+        vector<int> hittubenums;
+
+        // 3. Set up list of hit tubes
+        for (int j = 0; j < events.at(i).t.size(); j++)
+        {
+            if (events.at(i).is_inlier.at(j) == 1)
+            {
+                int chambnum = events.at(i).chamber.at(j);
+                int layernum = events.at(i).layer.at(j);
+                int tubenum = events.at(i).tube.at(j);
+
+                int realtubenum = 48 * (chambnum) + 16 * (layernum) + tubenum;
+
+                hittubenums.push_back(realtubenum);
+            }
+        }
+
+        for (int layer = 0; layer < 9; ++layer)
+        {
+
+            vector<NewEvent> ev;
+            ev.push_back(events.at(i));
+
+            // 4. Refit a line without the specified layer.
+            LineParts line = fit_chamber(ev, rfuncs, layer).at(0);
+            ev.clear();
+
+            // 5. Check if the line is a good fit, if so increment denominator
+            if (line.chisq > 50 || line.chisq == 0)
+                continue;
+
+            //std::cout << "Line: " << line.a << " " << line.b << " " << line.chisq << std::endl;
+
+            denominators.at(layer) +=1;
+
+            // 6. Check if the line is close enough to a hit in the layer
+            //int hitscount = 0;
+
+            for (int hit = 0; hit < hittubenums.size(); ++hit)
+            {
+
+                // 6.1. Check if the hit is in the layer
+                if (hittubenums.at(hit) / 16 == layer)
+                {
+
+                    int chamber = hittubenums.at(hit) / 48;
+                    int layer_rel_to_chamber = (hittubenums.at(hit) / 16) % 3;
+                    int tube_rel_to_layer = hittubenums.at(hit) % 16;
+
+                    vector<float> xy = getTubeCoords(chamber, layer_rel_to_chamber, tube_rel_to_layer);
+                    pair<float, float> dist_err = dist_calc_with_error(xy.at(0), xy.at(1), line);
+
+                    // std::cout << "\tTube: " << hittubenums.at(hit) << " at (x,y) (" << xy.at(0) << " " << xy.at(1) << "), Dist: " << dist_err.first << " Err: " << dist_err.second << std::endl;
+
+                    // 6.2. Check if the line is close enough to the hit
+                    if (dist_err.first < acceptable_distance_from_line)
+                    {
+                        //std::cout << "Hit is close enough to line!" << std::endl;
+                        numerators.at(layer) +=1;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < 9; ++i)
+        std::cout << "Layer " << i << ": " << numerators.at(i) << "/" << denominators.at(i) << std::endl;
+
+    vector<float> layer_eff;
+
+    for (int i = 0; i < 9; ++i)
+        layer_eff.push_back((float)numerators.at(i) / (float)denominators.at(i));
+
+    std::cout << "Layer efficiencies: " << std::endl;
+    for (int i = 0; i < 9; ++i)
+        std::cout << "\tLayer " << i << ": " << layer_eff.at(i) << " (" << numerators.at(i) << "/" << denominators.at(i) << ")" << std::endl;
+
+    return std::make_tuple(layer_eff, numerators, denominators);
 }
