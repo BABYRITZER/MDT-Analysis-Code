@@ -117,7 +117,7 @@ LineParts justfitlines(int setfn, int event, vector<float> gransac_lineparams)
 
 	static Double_t step[2] = {0.00001, 0.001};
 
-	gMinuit->mnparm(0, "a", vstart[0], step[0], -0.5, 0.5, ierflg);
+	gMinuit->mnparm(0, "a", vstart[0], step[0], -0.75, 0.75, ierflg);
 	gMinuit->mnparm(1, "b", vstart[1], step[1], -10, 50, ierflg);
 
 	// gMinuit->mnparm(2, "ch1loc", 0., step[1], -5., 5., ierflg);

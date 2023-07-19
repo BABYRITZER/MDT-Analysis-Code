@@ -39,10 +39,10 @@ typedef struct
  "reco_run529_analysis.root",
  "reco_run2850_analysis.root"};*/
 
- //c2 voltage   |988  525  526  527  528  2850 2800 522
- // run         |3100 3050 3000 2950 2900 2850 2800 3100
+// c2 voltage   |988  525  526  527  528  2850 2800 522
+//  run         |3100 3050 3000 2950 2900 2850 2800 3100
 
- // -> 522 525 526 527 528 2850 2800
+// -> 522 525 526 527 528 2850 2800
 
 vector<string> analysisfiles = {"reco_run522_analysis.root",
                                 "reco_run525_analysis.root",
@@ -51,7 +51,6 @@ vector<string> analysisfiles = {"reco_run522_analysis.root",
                                 "reco_run528_analysis.root",
                                 "reco_run2850_analysis.root",
                                 "reco_run2800_analysis.root"};
-
 
 // Declaration of leaf types
 Double_t t0s;
@@ -187,11 +186,9 @@ int main()
 
             efficiency.etop = isnan(layereff_top) ? 0 : layereff_top;
             efficiency.ebot = isnan(layereff_bot) ? 0 : layereff_bot;
-            efficiency.err =  sqrt(efficiency.eff*(1-efficiency.eff)/efficiency.ebot);
+            efficiency.err = sqrt(efficiency.eff * (1 - efficiency.eff) / efficiency.ebot);
 
             efficiencies.push_back(efficiency);
-
-
         }
 
         efficiencies_all.push_back(efficiencies);
@@ -286,6 +283,8 @@ int main()
     TCanvas *c2 = new TCanvas("c2", "c2", 1000, 1000);
     c2->Divide(3, 3);
 
+    TCanvas *c5 = new TCanvas("c5", "c5", 1000, 1000);
+
     for (int i = 0; i < 9; ++i)
     {
         c2->cd(i + 1);
@@ -311,6 +310,18 @@ int main()
         gr->SetMarkerSize(1);
         gr->SetMarkerColor(kBlack);
         gr->Draw("AP");
+
+        c2->Modified();
+        c2->Update();
+
+        c5->cd();
+        gr->Draw("APC");
+
+        c5->Modified();
+        c5->Update();
+
+        string titl = "layer_eff" + to_string(i+1) + ".png";
+        c5->SaveAs(titl.c_str());
     }
 
     c2->SaveAs("efficiencies_layers.pdf");
